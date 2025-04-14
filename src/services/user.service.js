@@ -1,10 +1,35 @@
 const jwt = require('jsonwebtoken');
 const userModel = require('../models/user.model');
 const bcrypt = require('bcrypt');
-
+const emailService = require('./email.service'); // Add this line
 
 const register = async (userData) => {
-    return await userModel.create(userData);
+    const userId = await userModel.create(userData);
+
+    // Only send verification email for email provider
+    if (userData.provider === 'email') {
+        const user = await userModel.findById(userId);
+        const token = jwt.sign(
+            { userId: user.id, email: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+        await emailService.sendVerificationEmail(user.email, token);
+    }
+
+    return userId;
+};
+
+// Update verifyEmail function
+const verifyEmail = async (token) => {
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        await userModel.updateVerificationStatus(decoded.userId, true);
+        return true;
+    } catch (err) {
+        throw new Error('Invalid or expired verification link');
+    }
 };
 
 const login = async (email, password) => {
@@ -45,10 +70,34 @@ const deleteUserByEmail = async (email) => {
     }
 };
 
+const resendVerificationEmail = async (email) => {
+    const user = await userModel.findByEmail(email);
+
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    if (user.is_verified) {
+        throw new Error('Email is already verified');
+    }
+
+    // Generate new token (existing token expires in 24h)
+    const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+    );
+
+    // Send email (reuse existing email service)
+    await emailService.sendVerificationEmail(user.email, token);
+};
+
 module.exports = {
     register,
+    verifyEmail,
     login,
     requestPasswordReset,
     resetPassword,
-    deleteUserByEmail
+    deleteUserByEmail,
+    resendVerificationEmail
 };

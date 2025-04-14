@@ -72,6 +72,30 @@ const initDB = async () => {
       );
     `);
 
+    await conn.query(`
+      CREATE TABLE companies (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(255) UNIQUE NOT NULL,  -- Unique company name
+          industry VARCHAR(100),
+          location VARCHAR(255),
+          size ENUM('1-10', '11-50', '51-200', '201-500', '500+'),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+
+    await conn.query(`
+      CREATE TABLE company_members (
+          user_id INT NOT NULL,
+          company_id INT NOT NULL,
+          role ENUM('admin', 'manager', 'member') NOT NULL DEFAULT 'member',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (user_id, company_id),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+      );
+    `);
+
   } finally {
     conn.release();
   }
