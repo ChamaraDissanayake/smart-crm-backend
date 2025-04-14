@@ -1,11 +1,11 @@
 const { openai, assistantId } = require('../config/open-ai.config');
-const Chat = require('../models/chat.model');
+const chatModel = require('../models/chat.model');
 
 const processChat = async (userId, userInput) => {
     try {
         let threadId;
 
-        const threadData = await Chat.getThreadByUserId(userId);
+        const threadData = await chatModel.getThreadByUserId(userId);
         if (threadData) {
             threadId = threadData.id;
         }
@@ -16,7 +16,7 @@ const processChat = async (userId, userInput) => {
                 return 'Failed to create a new thread';
             }
             threadId = newThread.id;
-            await Chat.createThread(threadId, userId);
+            await chatModel.createThread(threadId, userId);
         }
 
         await openai.beta.threads.messages.create(threadId, {
@@ -50,8 +50,8 @@ const processChat = async (userId, userInput) => {
             return 'No response received from the assistant';
         }
 
-        Chat.createMessage(threadId, 'user', userInput);
-        Chat.createMessage(threadId, 'assistant', messages.data[0].content[0].text.value);
+        chatModel.createMessage(threadId, 'user', userInput);
+        chatModel.createMessage(threadId, 'assistant', messages.data[0].content[0].text.value);
 
         return messages.data[0].content[0].text.value;
     } catch (error) {
@@ -61,7 +61,7 @@ const processChat = async (userId, userInput) => {
 
 const getHistory = async (userId, limit, offset) => {
     try {
-        return await Chat.getChatHistory(userId, limit, offset);
+        return await chatModel.getChatHistory(userId, limit, offset);
     } catch (error) {
         return `Error retrieving chat history: ${error.message}`;
     }

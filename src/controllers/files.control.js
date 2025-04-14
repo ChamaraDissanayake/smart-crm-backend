@@ -1,7 +1,7 @@
 const fileService = require('../services/file.service');
 const authenticate = require('../middleware/auth.gurd');
 const upload = require('../config/upload.config');
-const File = require('../models/file.model');
+const fileModel = require('../models/file.model');
 const fs = require('fs/promises');
 
 const uploadFile = [
@@ -30,7 +30,7 @@ const uploadFile = [
 
 const getFiles = async (req, res) => {
     try {
-        const files = await File.getAll();
+        const files = await fileModel.getAll();
         res.json(files);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -40,7 +40,7 @@ const getFiles = async (req, res) => {
 const deleteFile = async (req, res) => {
     try {
         const fileId = req.params.id;
-        const filePath = await File.getPath(fileId);
+        const filePath = await fileModel.getPath(fileId);
 
         if (!filePath) {
             return res.status(404).json({ error: 'File not found in database' });
@@ -52,7 +52,7 @@ const deleteFile = async (req, res) => {
             console.error('Physical file deletion warning:', err.message);
         }
 
-        const deleted = await File.deleteFile(fileId);
+        const deleted = await fileModel.deleteFile(fileId);
 
         res.json({
             message: 'File deleted successfully',

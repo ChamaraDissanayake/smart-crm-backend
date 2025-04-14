@@ -1,4 +1,4 @@
-const File = require('../models/file.model');
+const fileModel = require('../models/file.model');
 const fs = require('fs/promises');
 const crypto = require('crypto');
 const path = require('path');
@@ -24,7 +24,7 @@ const uploadFile = async (file) => {
         const newPath = path.join('uploads', newFilename);
 
         // Check for existing file
-        const existingFile = await File.findByHash(fileHash);
+        const existingFile = await fileModel.findByHash(fileHash);
         if (existingFile) {
             await fs.unlink(file.path);
             return {
@@ -38,7 +38,7 @@ const uploadFile = async (file) => {
         await fs.rename(file.path, newPath);
         const stats = await fs.stat(newPath);
 
-        const fileId = await File.create(
+        const fileId = await fileModel.create(
             file.originalname,
             newPath,
             fileHash,
@@ -63,7 +63,7 @@ const uploadFile = async (file) => {
 
 const cleanupOrphanedFiles = async () => {
     try {
-        const dbFiles = await File.getAllPaths();
+        const dbFiles = await fileModel.getAllPaths();
         const uploadDir = path.join(process.cwd(), 'uploads');
 
         await fs.access(uploadDir).catch(() => fs.mkdir(uploadDir));
