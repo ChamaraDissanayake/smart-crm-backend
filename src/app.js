@@ -11,7 +11,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 app.get("/test", (req, res) => {
-    res.send("Chamara API working");
+    res.send("Chamara CRM API working");
 });
 
 // Initialize database
@@ -30,7 +30,7 @@ initDB().then(() => {
     app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
     // Start server
-    const PORT = 3000;
+    const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     console.log("🚀 Server initialized and middleware applied.");
 }).catch(err => {

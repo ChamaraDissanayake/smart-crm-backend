@@ -2,11 +2,21 @@ const userService = require('../services/user.service');
 
 const register = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        await userService.register(email, password);
+        const { name, email, phone, password, provider = 'email', google_id = null } = req.body;
+        await userService.register({ name, email, phone, password, provider, google_id });
         res.status(201).json({ message: 'User created' });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+};
+
+const verifyEmail = async (req, res) => {
+    try {
+        const { token } = req.query;
+        await userService.verifyEmail(token);
+        res.redirect('https://your-frontend.com/continue-registration'); // update to your URL
+    } catch (err) {
+        res.status(400).json({ error: 'Invalid or expired verification link.' });
     }
 };
 
@@ -52,6 +62,7 @@ const deleteUserByEmail = async (req, res) => {
 
 module.exports = {
     register,
+    verifyEmail,
     login,
     requestPasswordReset,
     resetPassword,

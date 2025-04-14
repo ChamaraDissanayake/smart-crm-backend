@@ -11,7 +11,7 @@ const pool = mysql.createPool({
   port: process.env.DB_PORT || 3306
 });
 
-async function initDB() {
+const initDB = async () => {
   const conn = await pool.getConnection();
   try {
     await conn.query(`
@@ -35,7 +35,8 @@ async function initDB() {
         filename VARCHAR(255) NOT NULL,
         path VARCHAR(512) NOT NULL,
         content_hash VARCHAR(64) UNIQUE,
-        size BIGINT
+        size BIGINT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -46,16 +47,18 @@ async function initDB() {
         token VARCHAR(255) NOT NULL,
         expires_at DATETIME NOT NULL,
         used BOOLEAN DEFAULT FALSE,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
-      )
+      );
     `);
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS chat_threads (
         id VARCHAR(255) NOT NULL,
         user_id VARCHAR(255) NOT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id)
-      )
+      );
     `);
 
     await conn.query(`

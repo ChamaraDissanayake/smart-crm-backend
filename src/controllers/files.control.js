@@ -52,7 +52,8 @@ const deleteFile = async (req, res) => {
             console.error('Physical file deletion warning:', err.message);
         }
 
-        const deleted = await File.delete(fileId);
+        const deleted = await File.deleteFile(fileId);
+
         res.json({
             message: 'File deleted successfully',
             deletedId: fileId,
