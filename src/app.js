@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { initDB } = require('./config/db.config');
 const routes = require('./routes/index.route');
-const errorHandler = require('./middleware/error.gurd');
+const errorHandler = require('./middleware/error');
 const path = require('path');
 
 const app = express();

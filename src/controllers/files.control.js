@@ -1,5 +1,5 @@
 const fileService = require('../services/file.service');
-const authenticate = require('../middleware/auth.gurd');
+const authenticate = require('../middleware/auth');
 const upload = require('../config/upload.config');
 const fileModel = require('../models/file.model');
 const fs = require('fs/promises');

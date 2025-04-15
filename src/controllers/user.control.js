@@ -1,6 +1,5 @@
 const userService = require('../services/user.service');
 
-// controllers/user.controller.js
 const register = async (req, res) => {
     try {
         const { name, email, phone, password, provider = 'email', google_id = null } = req.body;

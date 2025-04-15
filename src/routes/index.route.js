@@ -2,11 +2,13 @@ const { Router } = require('express');
 const userRoutes = require('./user.route');
 const fileRoutes = require('./files.route');
 const chatRoutes = require('./chat.route');
+const companyRoutes = require('./company.route');
 
 const router = Router();
 
 // Routes
 router.use('/user', userRoutes);
+router.use('/company', companyRoutes);
 router.use('/files', fileRoutes);
 router.use('/chat', chatRoutes);
 

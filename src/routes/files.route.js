@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const { uploadFile, getFiles, deleteFile } = require('../controllers/files.control');
 const fileService = require('../services/file.service');
-const authenticate = require('../middleware/auth.gurd');
+const authenticate = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 
 const router = Router();

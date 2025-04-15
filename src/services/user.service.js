@@ -3,16 +3,23 @@ const userModel = require('../models/user.model');
 const bcrypt = require('bcrypt');
 const emailService = require('./email.service'); // Add this line
 
+const generatePlainToken = (payload, expiresIn) => {
+    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
+};
+
+// For API authentication (with Bearer prefix)
+const generateAuthToken = (userId) => {
+    return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+};
+
 const register = async (userData) => {
     const userId = await userModel.create(userData);
 
-    // Only send verification email for email provider
     if (userData.provider === 'email') {
         const user = await userModel.findById(userId);
-        const token = jwt.sign(
+        const token = generatePlainToken(
             { userId: user.id, email: user.email },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
+            '24h'
         );
         await emailService.sendVerificationEmail(user.email, token);
     }
@@ -20,11 +27,9 @@ const register = async (userData) => {
     return userId;
 };
 
-// Update verifyEmail function
 const verifyEmail = async (token) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
         await userModel.updateVerificationStatus(decoded.userId, true);
         return true;
     } catch (err) {
@@ -33,22 +38,17 @@ const verifyEmail = async (token) => {
 };
 
 const login = async (email, password) => {
-
     const user = await userModel.findByEmail(email);
     if (!user || !(await bcrypt.compare(password, user.password))) {
         throw new Error('Invalid credentials');
     }
-
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    return token;
+    return generateAuthToken(user.id); // Returns token for API auth
 };
 
 const requestPasswordReset = async (email) => {
     const user = await userModel.findByEmail(email);
     if (!user) throw new Error('User not found');
-
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '15m' });
-    return token;
+    return generatePlainToken({ userId: user.id }, '15m');
 };
 
 const resetPassword = async (token, newPassword) => {

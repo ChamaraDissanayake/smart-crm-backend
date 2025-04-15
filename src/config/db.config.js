@@ -24,8 +24,36 @@ const initDB = async () => {
         provider ENUM('email', 'google') DEFAULT 'email',
         google_id VARCHAR(255) UNIQUE,
         is_verified BOOLEAN DEFAULT FALSE,
+        is_deleted BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS companies (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(255) UNIQUE NOT NULL,
+          industry VARCHAR(100),
+          location VARCHAR(255),
+          size ENUM('1-10', '11-50', '51-200', '201-500', '500+'),
+          is_active BOOLEAN DEFAULT TRUE,
+          is_deleted BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS company_members (
+          user_id INT NOT NULL,
+          company_id INT NOT NULL,
+          role ENUM('admin', 'manager', 'member') NOT NULL DEFAULT 'member',
+          is_deleted BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (user_id, company_id),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
       );
     `);
 
@@ -69,30 +97,6 @@ const initDB = async () => {
         content TEXT NOT NULL,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (thread_id) REFERENCES chat_threads(id) ON DELETE CASCADE
-      );
-    `);
-
-    await conn.query(`
-      CREATE TABLE companies (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          name VARCHAR(255) UNIQUE NOT NULL,  -- Unique company name
-          industry VARCHAR(100),
-          location VARCHAR(255),
-          size ENUM('1-10', '11-50', '51-200', '201-500', '500+'),
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      );
-    `);
-
-    await conn.query(`
-      CREATE TABLE company_members (
-          user_id INT NOT NULL,
-          company_id INT NOT NULL,
-          role ENUM('admin', 'manager', 'member') NOT NULL DEFAULT 'member',
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY (user_id, company_id),
-          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-          FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
       );
     `);
 
