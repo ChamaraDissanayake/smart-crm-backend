@@ -8,23 +8,25 @@ const generatePlainToken = (payload, expiresIn) => {
 };
 
 // For API authentication (with Bearer prefix)
-const generateAuthToken = (userId) => {
-    return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+const generateAuthToken = (userId, email) => {
+    return jwt.sign({ userId, email }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
 const register = async (userData) => {
     const userId = await userModel.create(userData);
 
+    const user = await userModel.findById(userId);
+    const token = generatePlainToken(
+        { userId: user.id, email: user.email },
+        '24h'
+    );
+
+    // Send verification email
     if (userData.provider === 'email') {
-        const user = await userModel.findById(userId);
-        const token = generatePlainToken(
-            { userId: user.id, email: user.email },
-            '24h'
-        );
         await emailService.sendVerificationEmail(user.email, token);
     }
 
-    return userId;
+    return token;
 };
 
 const verifyEmail = async (token) => {
@@ -42,13 +44,13 @@ const login = async (email, password) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
         throw new Error('Invalid credentials');
     }
-    return generateAuthToken(user.id); // Returns token for API auth
+    return generateAuthToken(user.id, email); // Returns token for API auth
 };
 
 const requestPasswordReset = async (email) => {
     const user = await userModel.findByEmail(email);
     if (!user) throw new Error('User not found');
-    return generatePlainToken({ userId: user.id }, '15m');
+    return generatePlainToken({ userId: user.id, email }, '15m');
 };
 
 const resetPassword = async (token, newPassword) => {
@@ -97,6 +99,10 @@ const duplicateUserCheck = async (email) => {
     return user ? true : false; //If user exists, return true
 }
 
+const checkVerification = async (email) => {
+    return await userModel.checkIsVerifiedUser(email);
+}
+
 module.exports = {
     register,
     verifyEmail,
@@ -105,5 +111,6 @@ module.exports = {
     resetPassword,
     deleteUserByEmail,
     resendVerificationEmail,
-    duplicateUserCheck
+    duplicateUserCheck,
+    checkVerification
 };

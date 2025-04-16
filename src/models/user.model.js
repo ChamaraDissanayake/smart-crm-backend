@@ -74,6 +74,19 @@ const checkEmailExists = async (email) => {
     return rows.length > 0;
 }
 
+const checkIsVerifiedUser = async (email) => {
+    try {
+        const [rows] = await pool.query(
+            'SELECT is_verified FROM users WHERE email = ? AND is_deleted = FALSE',
+            [email]
+        );
+        return rows[0].is_verified;
+    } catch (error) {
+        return false;
+    }
+
+}
+
 module.exports = {
     create,
     findByEmail,
@@ -81,5 +94,6 @@ module.exports = {
     deleteUserByEmail,
     updatePassword,
     updateVerificationStatus,
-    checkEmailExists  // Export the new method
+    checkEmailExists,
+    checkIsVerifiedUser
 };
