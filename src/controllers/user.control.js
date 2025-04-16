@@ -80,6 +80,26 @@ const resendVerificationEmail = async (req, res) => {
     }
 };
 
+const checkDuplicateUser = async (req, res) => {
+    try {
+        const { email } = req.query;
+        if (!email) {
+            return res.status(400).json({ error: 'Email parameter is required' });
+        }
+
+        const userExists = await userService.duplicateUserCheck(email);
+
+        res.status(200).json({
+            exists: userExists,
+            message: userExists
+                ? 'Email is already registered'
+                : 'Email is available'
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error during email check' });
+    }
+};
+
 module.exports = {
     register,
     verifyEmail,
@@ -87,5 +107,6 @@ module.exports = {
     requestPasswordReset,
     resetPassword,
     deleteUserByEmail,
-    resendVerificationEmail
+    resendVerificationEmail,
+    checkDuplicateUser
 };

@@ -92,6 +92,11 @@ const resendVerificationEmail = async (email) => {
     await emailService.sendVerificationEmail(user.email, token);
 };
 
+const duplicateUserCheck = async (email) => {
+    const user = await userModel.checkEmailExists(email);
+    return user ? true : false; //If user exists, return true
+}
+
 module.exports = {
     register,
     verifyEmail,
@@ -99,5 +104,6 @@ module.exports = {
     requestPasswordReset,
     resetPassword,
     deleteUserByEmail,
-    resendVerificationEmail
+    resendVerificationEmail,
+    duplicateUserCheck
 };
