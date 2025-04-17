@@ -34,9 +34,9 @@ const initDB = async () => {
       CREATE TABLE IF NOT EXISTS companies (
           id INT AUTO_INCREMENT PRIMARY KEY,
           name VARCHAR(255) UNIQUE NOT NULL,
-          industry VARCHAR(100),
+          industry TINYINT UNSIGNED NOT NULL,
           location VARCHAR(255),
-          size ENUM('1-10', '11-50', '51-200', '201-500', '500+'),
+          size TINYINT UNSIGNED NOT NULL,
           is_active BOOLEAN DEFAULT TRUE,
           is_deleted BOOLEAN DEFAULT FALSE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

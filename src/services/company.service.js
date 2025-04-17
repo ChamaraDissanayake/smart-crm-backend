@@ -1,10 +1,13 @@
 const companyModel = require('../models/company.model');
 const { ConflictError, NotFoundError } = require('../utils/errors');
 
+const conflictMessage = 'Company name already exists. Please use unique name';
+const NotFoundErrorMessage = 'Company not found';
+
 const createCompany = async (companyData, userId) => {
     const existingCompany = await companyModel.findByName(companyData.name);
     if (existingCompany) {
-        throw new ConflictError('Company name already exists');
+        throw new ConflictError(conflictMessage);
     }
 
     const companyId = await companyModel.create(companyData);
@@ -19,7 +22,7 @@ const createCompany = async (companyData, userId) => {
 const getCompany = async (id) => {
     const company = await companyModel.findById(id);
     if (!company) {
-        throw new NotFoundError('Company not found');
+        throw new NotFoundError(NotFoundErrorMessage);
     }
     return company;
 };
@@ -28,13 +31,13 @@ const updateCompany = async (id, updateData) => {
     if (updateData.name) {
         const existingCompany = await companyModel.findByName(updateData.name);
         if (existingCompany && existingCompany.id !== id) {
-            throw new ConflictError('Company name already exists');
+            throw new ConflictError(conflictMessage);
         }
     }
 
     const updated = await companyModel.update(id, updateData);
     if (!updated) {
-        throw new NotFoundError('Company not found');
+        throw new NotFoundError(NotFoundErrorMessage);
     }
     return { id, ...updateData };
 };
@@ -42,7 +45,7 @@ const updateCompany = async (id, updateData) => {
 const deleteCompany = async (id) => {
     const company = await companyModel.findById(id);
     if (!company) {
-        throw new NotFoundError('Company not found');
+        throw new NotFoundError(NotFoundErrorMessage);
     }
     await companyModel.softDelete(id);
 };
@@ -54,7 +57,7 @@ const getUserCompanies = async (userId) => {
 const addCompanyMember = async (companyId, userId, role) => {
     const company = await companyModel.findById(companyId);
     if (!company) {
-        throw new NotFoundError('Company not found');
+        throw new NotFoundError(NotFoundErrorMessage);
     }
     await companyModel.addMember(userId, companyId, role);
 };
@@ -62,7 +65,7 @@ const addCompanyMember = async (companyId, userId, role) => {
 const removeCompanyMember = async (companyId, userId) => {
     const company = await companyModel.findById(companyId);
     if (!company) {
-        throw new NotFoundError('Company not found');
+        throw new NotFoundError(NotFoundErrorMessage);
     }
     await companyModel.removeMember(userId, companyId);
 };
@@ -70,7 +73,7 @@ const removeCompanyMember = async (companyId, userId) => {
 const getMyRole = async (companyId, userId) => {
     const company = await companyModel.findById(companyId);
     if (!company) {
-        throw new NotFoundError('Company not found');
+        throw new NotFoundError(NotFoundErrorMessage);
     }
     return await companyModel.getUserRole(userId, companyId);
 };
