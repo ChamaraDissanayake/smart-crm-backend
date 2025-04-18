@@ -3,23 +3,15 @@ const userModel = require('../models/user.model');
 const bcrypt = require('bcrypt');
 const emailService = require('./email.service'); // Add this line
 
-const generatePlainToken = (payload, expiresIn) => {
+const generateJWT = (payload, expiresIn) => {
     return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
-};
-
-// For API authentication (with Bearer prefix)
-const generateAuthToken = (userId, email) => {
-    return jwt.sign({ userId, email }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
 const register = async (userData) => {
     const userId = await userModel.create(userData);
 
     const user = await userModel.findById(userId);
-    const token = generatePlainToken(
-        { userId: user.id, email: user.email },
-        '24h'
-    );
+    const token = generateJWT({ userId: user.id, email: user.email, isVerified: false }, '24h');
 
     // Send verification email
     if (userData.provider === 'email') {
@@ -44,13 +36,13 @@ const login = async (email, password) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
         throw new Error('Invalid credentials');
     }
-    return generateAuthToken(user.id, email); // Returns token for API auth
+    return generateJWT({ userId: user.id, email, isVerified: user.is_verified }, '7d'); // Returns token for API auth
 };
 
 const requestPasswordReset = async (email) => {
     const user = await userModel.findByEmail(email);
     if (!user) throw new Error('User not found');
-    return generatePlainToken({ userId: user.id, email }, '15m');
+    return generateJWT({ userId: user.id, email, isVerified: user.is_verified }, '15m');
 };
 
 const resetPassword = async (token, newPassword) => {

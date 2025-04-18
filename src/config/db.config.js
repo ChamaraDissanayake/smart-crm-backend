@@ -50,6 +50,7 @@ const initDB = async () => {
           company_id INT NOT NULL,
           role ENUM('admin', 'manager', 'member') NOT NULL DEFAULT 'member',
           is_deleted BOOLEAN DEFAULT FALSE,
+          is_default BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           PRIMARY KEY (user_id, company_id),
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

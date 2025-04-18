@@ -71,11 +71,18 @@ const softDelete = async (id) => {
 };
 
 const addMember = async (userId, companyId, role = 'member') => {
+    // Check if user is already a member of any company
+    const existingCompanies = await findByUserId(userId);
+    const isDefault = existingCompanies.length === 0;
+
     const [result] = await pool.query(
-        `INSERT INTO company_members (user_id, company_id, role)
-     VALUES (?, ?, ?)
-     ON DUPLICATE KEY UPDATE role = ?, is_deleted = FALSE`,
-        [userId, companyId, role, role]
+        `INSERT INTO company_members (user_id, company_id, role, is_default)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE 
+           role = VALUES(role), 
+           is_deleted = FALSE, 
+           is_default = VALUES(is_default)`,
+        [userId, companyId, role, isDefault]
     );
     return result.affectedRows > 0;
 };
