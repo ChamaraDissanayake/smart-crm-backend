@@ -15,8 +15,7 @@ const verifyEmail = async (req, res) => {
     try {
         const { token } = req.query;
         await userService.verifyEmail(token);
-        res.json({ token, message: 'Email verified successfully' });
-        // res.redirect('https://your-frontend.com/continue-registration'); // update to your URL
+        res.json({ isVerified: true, message: 'Email verified successfully' });
     } catch (err) {
         res.status(400).json({ error: 'Invalid or expired verification link.' });
     }
@@ -94,24 +93,23 @@ const checkDuplicateUser = async (req, res) => {
 
 const checkUserVerification = async (req, res) => {
     try {
-        const { token } = req.query;
-        console.log('Chamara token:', token);
+        const { email } = req.query;
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log('Chamara decoded:', decoded);
-
-        if (!decoded.email) {
+        if (!email) {
             return res.status(400).json({ error: 'Email parameter is required' });
         }
 
-        const is_verified = await userService.checkVerification(decoded.email);
+        const { is_verified, userId } = await userService.checkVerification(email);
 
-        res.status(200).json({ isVerified: is_verified ? true : false });
-
+        res.status(200).json({
+            isVerified: !!is_verified,
+            userId,
+        });
     } catch (err) {
         res.status(500).json({ error: 'Server error during email verification check' });
     }
-}
+};
+
 
 module.exports = {
     register,

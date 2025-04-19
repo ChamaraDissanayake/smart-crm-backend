@@ -77,15 +77,22 @@ const checkEmailExists = async (email) => {
 const checkIsVerifiedUser = async (email) => {
     try {
         const [rows] = await pool.query(
-            'SELECT is_verified FROM users WHERE email = ? AND is_deleted = FALSE',
+            'SELECT id AS userId, is_verified FROM users WHERE email = ? AND is_deleted = FALSE',
             [email]
         );
-        return rows[0].is_verified;
-    } catch (error) {
-        return false;
-    }
 
-}
+        if (rows.length > 0) {
+            const { userId, is_verified } = rows[0];
+            return { userId, is_verified };
+        } else {
+            return { userId: null, is_verified: false };
+        }
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
 
 module.exports = {
     create,

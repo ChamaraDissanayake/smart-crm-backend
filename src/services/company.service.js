@@ -4,18 +4,18 @@ const { ConflictError, NotFoundError } = require('../utils/errors');
 const conflictMessage = 'Company name already exists. Please use unique name';
 const NotFoundErrorMessage = 'Company not found';
 
-const createCompany = async (companyData, userId) => {
-    const existingCompany = await companyModel.findByName(companyData.name);
+const createCompany = async (data) => {
+    const existingCompany = await companyModel.findByName(data.name);
     if (existingCompany) {
         throw new ConflictError(conflictMessage);
     }
 
-    const companyId = await companyModel.create(companyData);
-    await companyModel.addMember(userId, companyId, 'admin');
+    const companyId = await companyModel.create(data);
+    await companyModel.addMember(data.userId, companyId, 'admin');
 
     return {
         id: companyId,
-        ...companyData
+        ...data
     };
 };
 

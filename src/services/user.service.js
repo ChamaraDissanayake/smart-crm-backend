@@ -1,17 +1,14 @@
 const jwt = require('jsonwebtoken');
 const userModel = require('../models/user.model');
 const bcrypt = require('bcrypt');
-const emailService = require('./email.service'); // Add this line
-
-const generateJWT = (payload, expiresIn) => {
-    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
-};
+const emailService = require('./helpers/email.helper.service');
+const jwtService = require('./helpers/jwt.helper.service');
 
 const register = async (userData) => {
     const userId = await userModel.create(userData);
 
     const user = await userModel.findById(userId);
-    const token = generateJWT({ userId: user.id, email: user.email, isVerified: false }, '24h');
+    const token = jwtService.generateJWT({ type: 'verify-email', userId: user.id, email: user.email, isVerified: false }, '24h');
 
     // Send verification email
     if (userData.provider === 'email') {
@@ -23,7 +20,7 @@ const register = async (userData) => {
 
 const verifyEmail = async (token) => {
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwtService.decodeJWT(token, process.env.JWT_SECRET);
         await userModel.updateVerificationStatus(decoded.userId, true);
         return true;
     } catch (err) {
@@ -36,18 +33,25 @@ const login = async (email, password) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
         throw new Error('Invalid credentials');
     }
-    return generateJWT({ userId: user.id, email, isVerified: user.is_verified }, '7d'); // Returns token for API auth
+    return jwtService.generateJWT({ type: 'login', userId: user.id, email, isVerified: user.is_verified }, '7d');
 };
 
 const requestPasswordReset = async (email) => {
-    const user = await userModel.findByEmail(email);
-    if (!user) throw new Error('User not found');
-    return generateJWT({ userId: user.id, email, isVerified: user.is_verified }, '15m');
+    try {
+        const user = await userModel.findByEmail(email);
+        if (!user) throw new Error('User not found');
+        const token = jwtService.generateJWT({ type: 'password-reset', userId: user.id, email, isVerified: user.is_verified }, '15m');
+        await emailService.sendPasswordResetEmail(user.email, token);
+        return token;
+    } catch (error) {
+        console.log(error);
+        throw new Error('Error generating password reset token');
+    }
 };
 
 const resetPassword = async (token, newPassword) => {
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwtService.decodeJWT(token, process.env.JWT_SECRET);
         await userModel.updatePassword(decoded.userId, newPassword);
         return true;
     } catch (err) {
@@ -76,11 +80,7 @@ const resendVerificationEmail = async (email) => {
     }
 
     // Generate new token (existing token expires in 24h)
-    const token = jwt.sign(
-        { userId: user.id, email: user.email },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
-    );
+    const token = jwtService.generateJWT({ type: 're-verify-email', userId: user.id, email: user.email, isVerified: user.is_verified }, '24h');
 
     // Send email (reuse existing email service)
     await emailService.sendVerificationEmail(user.email, token);
