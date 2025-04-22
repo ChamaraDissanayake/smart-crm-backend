@@ -103,6 +103,14 @@ const getUserRole = async (userId, companyId) => {
     return rows[0]?.role;
 };
 
+const updateCompanyPlan = async (planId, companyId) => {
+    const [rows] = await pool.query(
+        `UPDATE companies SET plan_id = ? WHERE id = ?`,
+        [planId, companyId]
+    );
+    return rows[0];
+};
+
 module.exports = {
     create,
     findByName,
@@ -112,5 +120,6 @@ module.exports = {
     softDelete,
     addMember,
     removeMember,
-    getUserRole
+    getUserRole,
+    updateCompanyPlan
 };

@@ -3,6 +3,7 @@ const userRoutes = require('./user.route');
 const fileRoutes = require('./files.route');
 const chatRoutes = require('./chat.route');
 const companyRoutes = require('./company.route');
+const subscriptionRoutes = require('./subscription.route');
 
 const router = Router();
 
@@ -11,6 +12,7 @@ router.use('/user', userRoutes);
 router.use('/company', companyRoutes);
 router.use('/files', fileRoutes);
 router.use('/chat', chatRoutes);
+router.use('/subscriptions', subscriptionRoutes);
 
 // 404 handler
 router.use((req, res) => {

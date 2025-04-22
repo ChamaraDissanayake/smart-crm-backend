@@ -7,7 +7,8 @@ const {
     getUserCompanies,
     getMyRole,
     addMember,
-    removeMember
+    removeMember,
+    updateCompanyPlan
 } = require('../controllers/company.control');
 
 const authenticate = require('../middleware/auth');
@@ -19,6 +20,7 @@ router.post('/', authenticate, createCompany);
 router.get('/user-companies', authenticate, getUserCompanies);
 router.get('/:id', authenticate, getCompany);
 router.patch('/:id', authenticate, updateCompany);
+router.patch('/update-plan:id', authenticate, updateCompanyPlan);
 router.delete('/:id', authenticate, deleteCompany);
 
 // Membership

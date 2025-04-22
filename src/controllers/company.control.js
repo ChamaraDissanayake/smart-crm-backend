@@ -27,6 +27,15 @@ const updateCompany = async (req, res) => {
     }
 };
 
+const updateCompanyPlan = async (req, res) => {
+    try {
+        const company = await companyService.updateCompanyPlan(req.params.id, req.body);
+        res.json(company);
+    } catch (err) {
+        res.status(err.statusCode || 500).json({ error: err.message });
+    }
+};
+
 const deleteCompany = async (req, res) => {
     try {
         await companyService.deleteCompany(req.params.id);
@@ -87,5 +96,6 @@ module.exports = {
     getUserCompanies,
     addMember,
     removeMember,
-    getMyRole
+    getMyRole,
+    updateCompanyPlan
 };

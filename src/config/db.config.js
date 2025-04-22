@@ -37,6 +37,7 @@ const initDB = async () => {
           industry TINYINT UNSIGNED NOT NULL,
           location VARCHAR(255),
           size TINYINT UNSIGNED NOT NULL,
+          plan_id VARCHAR(50) NOT NULL DEFAULT 'free',
           is_active BOOLEAN DEFAULT TRUE,
           is_deleted BOOLEAN DEFAULT FALSE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -98,6 +99,67 @@ const initDB = async () => {
         content TEXT NOT NULL,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (thread_id) REFERENCES chat_threads(id) ON DELETE CASCADE
+      );
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        price_monthly DECIMAL(10,2) NOT NULL,
+        price_yearly DECIMAL(10,2) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `);
+
+    await conn.query(`
+      INSERT INTO subscriptions (id, name, price_monthly, price_yearly, description)
+      VALUES 
+        ('free', 'Free Trial', 0, 0, 'Get started with essential features for a limited time.'),
+        ('basic', 'Basic', 9, 90, 'Perfect for small teams and early-stage businesses.'),
+        ('standard', 'Standard', 19, 190, 'Ideal for growing teams needing more automation.'),
+        ('premium', 'Premium', 29, 290, 'Advanced tools for large-scale teams and enterprises.')
+      ON DUPLICATE KEY UPDATE
+        name = VALUES(name),
+        price_monthly = VALUES(price_monthly),
+        price_yearly = VALUES(price_yearly),
+        description = VALUES(description);
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS company_subscriptions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        company_id INT NOT NULL,
+        plan_id VARCHAR(50) NOT NULL,
+        billing_cycle ENUM('monthly', 'yearly') DEFAULT 'monthly',
+        start_date DATETIME NOT NULL,
+        end_date DATETIME NOT NULL,
+        renewal_date DATETIME,
+        auto_renew BOOLEAN DEFAULT TRUE,
+        status ENUM('active', 'canceled', 'expired', 'pending') DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+        FOREIGN KEY (plan_id) REFERENCES subscriptions(id)
+      );
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS subscription_invoices (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        subscription_id INT NOT NULL,
+        amount DECIMAL(10,2) NOT NULL,
+        currency VARCHAR(3) DEFAULT 'USD',
+        status ENUM('paid', 'pending', 'failed') DEFAULT 'pending',
+        payment_method VARCHAR(50),
+        transaction_id VARCHAR(255),
+        invoice_date DATETIME NOT NULL,
+        due_date DATETIME NOT NULL,
+        paid_at DATETIME,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (subscription_id) REFERENCES company_subscriptions(id) ON DELETE CASCADE
       );
     `);
 

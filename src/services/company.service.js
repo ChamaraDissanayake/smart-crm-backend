@@ -78,6 +78,14 @@ const getMyRole = async (companyId, userId) => {
     return await companyModel.getUserRole(userId, companyId);
 };
 
+const updateCompanyPlan = async (companyId, planId) => {
+    const company = await companyModel.updateCompanyPlan(planId, companyId);
+    if (!company) {
+        throw new NotFoundError(NotFoundErrorMessage);
+    }
+    return company;
+};
+
 module.exports = {
     createCompany,
     getCompany,
@@ -86,5 +94,6 @@ module.exports = {
     getUserCompanies,
     addCompanyMember,
     removeCompanyMember,
-    getMyRole
+    getMyRole,
+    updateCompanyPlan
 };
