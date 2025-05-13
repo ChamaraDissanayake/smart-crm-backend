@@ -1,6 +1,5 @@
 const mysql = require('mysql2/promise');
 const dotenv = require('dotenv');
-
 dotenv.config();
 
 const pool = mysql.createPool({
@@ -16,7 +15,7 @@ const initDB = async () => {
   try {
     await conn.query(`
       CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id VARCHAR(36) PRIMARY KEY,
         name VARCHAR(100),
         email VARCHAR(255) UNIQUE NOT NULL,
         phone VARCHAR(20),
@@ -32,36 +31,37 @@ const initDB = async () => {
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS companies (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          name VARCHAR(255) UNIQUE NOT NULL,
-          industry TINYINT UNSIGNED NOT NULL,
-          location VARCHAR(255),
-          size TINYINT UNSIGNED NOT NULL,
-          plan_id VARCHAR(50) NOT NULL DEFAULT 'free',
-          is_active BOOLEAN DEFAULT TRUE,
-          is_deleted BOOLEAN DEFAULT FALSE,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        id VARCHAR(36) PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        industry TINYINT UNSIGNED NOT NULL,
+        location VARCHAR(255),
+        size TINYINT UNSIGNED NOT NULL,
+        chatbot_instruction TEXT,
+        plan_id VARCHAR(50) NOT NULL DEFAULT 'free',
+        is_active BOOLEAN DEFAULT TRUE,
+        is_deleted BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
     `);
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS company_members (
-          user_id INT NOT NULL,
-          company_id INT NOT NULL,
-          role ENUM('admin', 'manager', 'member') NOT NULL DEFAULT 'member',
-          is_deleted BOOLEAN DEFAULT FALSE,
-          is_default BOOLEAN DEFAULT TRUE,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY (user_id, company_id),
-          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-          FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+        user_id VARCHAR(36) NOT NULL,
+        company_id VARCHAR(36) NOT NULL,
+        role ENUM('admin', 'manager', 'member') NOT NULL DEFAULT 'member',
+        is_deleted BOOLEAN DEFAULT FALSE,
+        is_default BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, company_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
       );
     `);
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS files (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id VARCHAR(36) PRIMARY KEY,
         filename VARCHAR(255) NOT NULL,
         path VARCHAR(512) NOT NULL,
         content_hash VARCHAR(64) UNIQUE,
@@ -72,8 +72,8 @@ const initDB = async () => {
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS password_reset_tokens (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL,
         token VARCHAR(255) NOT NULL,
         expires_at DATETIME NOT NULL,
         used BOOLEAN DEFAULT FALSE,
@@ -84,17 +84,16 @@ const initDB = async () => {
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS chat_threads (
-        id VARCHAR(255) NOT NULL,
-        user_id VARCHAR(255) NOT NULL,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (id)
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS chat_messages (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        thread_id VARCHAR(255) NOT NULL,
+        thread_id VARCHAR(36) NOT NULL,
         role ENUM('user','assistant') NOT NULL,
         content TEXT NOT NULL,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -130,8 +129,8 @@ const initDB = async () => {
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS company_subscriptions (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        company_id INT NOT NULL,
+        id VARCHAR(36) PRIMARY KEY,
+        company_id VARCHAR(36) NOT NULL,
         plan_id VARCHAR(50) NOT NULL,
         billing_cycle ENUM('monthly', 'yearly') DEFAULT 'monthly',
         start_date DATETIME NOT NULL,
@@ -148,8 +147,8 @@ const initDB = async () => {
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS subscription_invoices (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        subscription_id INT NOT NULL,
+        id VARCHAR(36) PRIMARY KEY,
+        subscription_id VARCHAR(36) NOT NULL,
         amount DECIMAL(10,2) NOT NULL,
         currency VARCHAR(3) DEFAULT 'USD',
         status ENUM('paid', 'pending', 'failed') DEFAULT 'pending',
@@ -162,11 +161,10 @@ const initDB = async () => {
         FOREIGN KEY (subscription_id) REFERENCES company_subscriptions(id) ON DELETE CASCADE
       );
     `);
-
   } finally {
     conn.release();
   }
-}
+};
 
 module.exports = {
   initDB,

@@ -1,5 +1,6 @@
 const companyModel = require('../models/company.model');
 const { ConflictError, NotFoundError } = require('../utils/errors');
+const { v4: uuidv4 } = require('uuid');
 
 const conflictMessage = 'Company name already exists. Please use unique name';
 const NotFoundErrorMessage = 'Company not found';
@@ -10,7 +11,9 @@ const createCompany = async (data) => {
         throw new ConflictError(conflictMessage);
     }
 
-    const companyId = await companyModel.create(data);
+    const companyId = uuidv4();
+    await companyModel.create({ id: companyId, ...data });
+
     await companyModel.addMember(data.userId, companyId, 'admin');
 
     return {
@@ -25,6 +28,15 @@ const getCompany = async (id) => {
         throw new NotFoundError(NotFoundErrorMessage);
     }
     return company;
+};
+
+const updateDefaultCompany = async (userId, companyId) => {
+    const company = await companyModel.findById(companyId);
+    if (!company) {
+        throw new NotFoundError(NotFoundErrorMessage);
+    }
+
+    await companyModel.updateDefaultCompany(userId, companyId);
 };
 
 const updateCompany = async (id, updateData) => {
@@ -95,5 +107,6 @@ module.exports = {
     addCompanyMember,
     removeCompanyMember,
     getMyRole,
-    updateCompanyPlan
+    updateCompanyPlan,
+    updateDefaultCompany
 };

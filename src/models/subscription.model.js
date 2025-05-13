@@ -8,7 +8,6 @@ const getAllPlans = async () => {
 };
 
 const addSubscription = async (data) => {
-    console.log('Chamara data', data);
 
     const conn = await pool.getConnection();
     try {
@@ -35,9 +34,10 @@ const addSubscription = async (data) => {
 
         await conn.query(
             `INSERT INTO company_subscriptions (
-                company_id, plan_id, billing_cycle, start_date, end_date, renewal_date, auto_renew, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                id, company_id, plan_id, billing_cycle, start_date, end_date, renewal_date, auto_renew, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
+                data.id,
                 data.companyId,
                 data.planId,
                 data.billingCycle,

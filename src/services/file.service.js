@@ -3,6 +3,7 @@ const fs = require('fs/promises');
 const crypto = require('crypto');
 const path = require('path');
 const { createReadStream } = require('fs');
+const { v4: uuidv4 } = require('uuid');
 
 const uploadFile = async (file) => {
     try {
@@ -38,12 +39,9 @@ const uploadFile = async (file) => {
         await fs.rename(file.path, newPath);
         const stats = await fs.stat(newPath);
 
-        const fileId = await fileModel.create(
-            file.originalname,
-            newPath,
-            fileHash,
-            stats.size
-        );
+        const fileId = uuidv4();
+        await fileModel.create(fileId, file.originalname, newPath, fileHash, stats.size);
+
 
         return {
             fileId,

@@ -1,37 +1,25 @@
-const { processChat, getHistory } = require('../services/chat.service');
+// src/controllers/chat.controller.js
 
-const processChatMessage = async (req, res) => {
+const chatService = require('../services/chat.service');
+
+const chatHandler = async (req, res) => {
     try {
-        const { userId, userInput } = req.body;
-        if (!userId || !userInput) {
-            return res.status(400).json({ error: 'userId and userInput are required' });
+        const prompt = req.body?.userInput;
+        const userId = req.body?.userId;
+        const companyId = req.body?.companyId;
+
+        if (!prompt || !userId) {
+            return res.status(400).json({ message: 'Prompt or user ID missing' });
         }
 
-        const botResponse = await processChat(userId, userInput);
-
-        res.json({ botResponse });
-    } catch (err) {
-        console.error('Error processing chat:', err);
-        res.status(500).json({ error: err.message });
-    }
-};
-
-const getChatHistory = async (req, res) => {
-    try {
-        const { userId, limit = 10, offset = 0 } = req.query;
-        if (!userId) {
-            return res.status(400).json({ error: 'userId is required' });
-        }
-
-        const chatHistory = await getHistory(userId, limit, offset);
-        res.json({ chatHistory });
-    } catch (err) {
-        console.error('Error retrieving chat history:', err);
-        res.status(500).json({ error: err.message });
+        const botResponse = await chatService.handleChat(userId, companyId, prompt);
+        return res.json({ botResponse });
+    } catch (error) {
+        console.error('Chat error:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
 
 module.exports = {
-    processChatMessage,
-    getChatHistory
+    chatHandler,
 };

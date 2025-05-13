@@ -1,4 +1,5 @@
 const subscriptionModel = require('../models/subscription.model');
+const { v4: uuidv4 } = require('uuid');
 
 const getAllPlans = async () => {
     const plans = await subscriptionModel.getAllPlans();
@@ -13,7 +14,9 @@ const getAllPlans = async () => {
 };
 
 const subscribePlan = async (data) => {
-    return await subscriptionModel.addSubscription(data);
+    const id = uuidv4();
+    const subscriptionData = { id, ...data };
+    return await subscriptionModel.addSubscription(subscriptionData);
 }
 
 module.exports = {

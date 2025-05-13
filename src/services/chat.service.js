@@ -1,73 +1,59 @@
-const { openai, assistantId } = require('../config/open-ai.config');
+const { v4: uuidv4 } = require('uuid');
+const openai = require('../config/deepseek.config');
 const chatModel = require('../models/chat.model');
+const companyModel = require('../models/company.model'); // NEW
 
-const processChat = async (userId, userInput) => {
-    try {
-        let threadId;
+const MODEL_NAME = 'deepseek-chat';
 
-        const threadData = await chatModel.getThreadByUserId(userId);
-        if (threadData) {
-            threadId = threadData.id;
-        }
+const handleChat = async (userId, companyId, prompt) => {
+    // Step 1: Get thread
 
-        if (!threadId) {
-            const newThread = await openai.beta.threads.create();
-            if (!newThread || !newThread.id) {
-                return 'Failed to create a new thread';
-            }
-            threadId = newThread.id;
-            await chatModel.createThread(threadId, userId);
-        }
-
-        await openai.beta.threads.messages.create(threadId, {
-            role: 'user',
-            content: userInput,
-        });
-
-        const run = await openai.beta.threads.runs.create(threadId, {
-            assistant_id: assistantId,
-        });
-
-        if (!run || !run.id) {
-            return 'Failed to create a run for the thread';
-        }
-
-        let runStatus;
-        do {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
-            if (!runStatus) {
-                return 'Failed to retrieve run status';
-            }
-        } while (runStatus.status !== 'completed');
-
-        const messages = await openai.beta.threads.messages.list(threadId, {
-            order: 'desc',
-            limit: 1,
-        });
-
-        if (!messages || !messages.data || messages.data.length === 0) {
-            return 'No response received from the assistant';
-        }
-
-        chatModel.createMessage(threadId, 'user', userInput);
-        chatModel.createMessage(threadId, 'assistant', messages.data[0].content[0].text.value);
-
-        return messages.data[0].content[0].text.value;
-    } catch (error) {
-        return `Error processing chat: ${error.message}`;
+    let thread = await chatModel.getThreadByUserId(userId);
+    if (!thread) {
+        const newThreadId = uuidv4();
+        await chatModel.createThread(newThreadId, userId);
+        thread = { id: newThreadId };
     }
-};
 
-const getHistory = async (userId, limit, offset) => {
-    try {
-        return await chatModel.getChatHistory(userId, limit, offset);
-    } catch (error) {
-        return `Error retrieving chat history: ${error.message}`;
-    }
+    const threadId = thread.id;
+
+    // Step 2: Save user message
+    await chatModel.createMessage(threadId, 'user', prompt);
+
+    // Step 3: Get past messages
+    const pastMessages = await chatModel.getMessagesByThread(threadId, 10, 0);
+    const chatHistory = pastMessages.reverse().map(msg => ({
+        role: msg.role,
+        content: msg.content,
+    }));
+
+    // Step 4: Get company instructions
+    const company = await companyModel.findById(companyId);
+
+    const instruction = company?.chatbot_instruction || "You are a helpful assistant.";
+
+    // Step 5: Construct full message array
+    const messages = [
+        { role: 'system', content: instruction },
+        ...chatHistory,
+    ];
+
+    // Step 6: Ask DeepSeek
+    const response = await openai.chat.completions.create({
+        model: MODEL_NAME,
+        messages,
+        temperature: 0.3,
+        max_tokens: 300,
+    });
+
+    const assistantReply = response.choices[0].message.content;
+
+    // Step 7: Save response
+    await chatModel.createMessage(threadId, 'assistant', assistantReply);
+
+    return assistantReply;
 };
 
 module.exports = {
-    processChat,
-    getHistory,
+    handleChat,
 };

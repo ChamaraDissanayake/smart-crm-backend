@@ -1,7 +1,7 @@
 const { pool } = require('../config/db.config');
 const bcrypt = require('bcrypt');
 
-const create = async ({ name, email, phone, password, provider, google_id }) => {
+const create = async ({ id, name, email, phone, password, provider, google_id }) => {
     let hashedPassword = null;
     let isVerified = true;
 
@@ -11,9 +11,9 @@ const create = async ({ name, email, phone, password, provider, google_id }) => 
     }
 
     const [result] = await pool.query(
-        `INSERT INTO users (name, email, phone, password, provider, google_id, is_verified) 
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [name, email, phone, hashedPassword, provider, google_id, isVerified]
+        `INSERT INTO users (id, name, email, phone, password, provider, google_id, is_verified) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, name, email, phone, hashedPassword, provider, google_id, isVerified]
     );
 
     return result.insertId;

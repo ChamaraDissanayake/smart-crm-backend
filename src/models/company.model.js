@@ -1,12 +1,40 @@
 const { pool } = require('../config/db.config');
 
-const create = async ({ name, industry, location, size }) => {
+const create = async ({ id, name, industry, location, size, chatbotInstructions }) => {
     const [result] = await pool.query(
-        `INSERT INTO companies (name, industry, location, size)
-     VALUES (?, ?, ?, ?)`,
-        [name, industry, location, size]
+        `INSERT INTO companies (id, name, industry, location, size, chatbot_instruction)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, name, industry, location, size, chatbotInstructions]
     );
     return result.insertId;
+};
+
+const updateDefaultCompany = async (userId, companyId) => {
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        await conn.query(
+            `UPDATE company_members 
+             SET is_default = FALSE 
+             WHERE user_id = ?`,
+            [userId]
+        );
+
+        await conn.query(
+            `UPDATE company_members 
+             SET is_default = TRUE 
+             WHERE user_id = ? AND company_id = ?`,
+            [userId, companyId]
+        );
+
+        await conn.commit();
+    } catch (err) {
+        await conn.rollback();
+        throw err;
+    } finally {
+        conn.release();
+    }
 };
 
 const findByName = async (name) => {
@@ -27,13 +55,37 @@ const findById = async (id) => {
 
 const findByUserId = async (userId) => {
     const [rows] = await pool.query(
-        `SELECT c.* FROM companies c
-     JOIN company_members cm ON c.id = cm.company_id
-     WHERE cm.user_id = ? AND c.is_deleted = FALSE AND cm.is_deleted = FALSE`,
+        `SELECT 
+            c.id,
+            c.name,
+            c.industry,
+            c.location,
+            c.size,
+            c.plan_id as planId,
+            c.is_active as isActive,
+            cm.is_default as isDefault
+         FROM companies c
+         JOIN company_members cm ON c.id = cm.company_id
+         WHERE cm.user_id = ? AND c.is_deleted = FALSE AND cm.is_deleted = FALSE`,
         [userId]
     );
     return rows;
 };
+
+const getSelectedCompanyByUserId = async (userId) => {
+    const [rows] = await pool.query(`
+        SELECT c.*
+        FROM companies c
+        JOIN company_members cm ON cm.company_id = c.id
+        WHERE cm.user_id = ? 
+          AND cm.is_default = TRUE 
+          AND cm.is_deleted = FALSE 
+          AND c.is_deleted = FALSE
+        LIMIT 1;`,
+        [userId]);
+    return rows[0];
+};
+
 
 const update = async (id, { name, industry, location, size }) => {
     const [result] = await pool.query(
@@ -121,5 +173,7 @@ module.exports = {
     addMember,
     removeMember,
     getUserRole,
-    updateCompanyPlan
+    updateCompanyPlan,
+    getSelectedCompanyByUserId,
+    updateDefaultCompany
 };

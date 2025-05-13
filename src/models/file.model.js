@@ -1,11 +1,11 @@
 const { pool } = require('../config/db.config');
 const fs = require('fs/promises');  // Added filesystem module
 
-const create = async (filename, path, content_hash, size) => {
+const create = async (id, filename, path, content_hash, size) => {
     try {
         const [result] = await pool.query(
-            'INSERT INTO files (filename, path, content_hash, size) VALUES (?, ?, ?, ?)',
-            [filename, path, content_hash, size]
+            'INSERT INTO files (id, filename, path, content_hash, size) VALUES (?, ?, ?, ?, ?)',
+            [id, filename, path, content_hash, size]
         );
         return result.insertId;
     } catch (error) {
