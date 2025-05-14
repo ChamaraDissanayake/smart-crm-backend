@@ -85,8 +85,12 @@ const initDB = async () => {
     await conn.query(`
       CREATE TABLE IF NOT EXISTS chat_threads (
         id VARCHAR(36) PRIMARY KEY,
+        company_id VARCHAR(36) NOT NULL,
         user_id VARCHAR(36) NOT NULL,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        channel ENUM('whatsapp', 'messenger', 'tiktok', 'instagram', 'bot') NOT NULL DEFAULT 'bot',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
 

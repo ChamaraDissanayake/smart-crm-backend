@@ -1,5 +1,3 @@
-// src/config/deepseek.config.js
-
 const { OpenAI } = require('openai');
 
 const openai = new OpenAI({
