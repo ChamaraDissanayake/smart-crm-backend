@@ -77,7 +77,7 @@ const initDB = async () => {
         token VARCHAR(255) NOT NULL,
         expires_at DATETIME NOT NULL,
         used BOOLEAN DEFAULT FALSE,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
       );
     `);
@@ -100,7 +100,7 @@ const initDB = async () => {
         thread_id VARCHAR(36) NOT NULL,
         role ENUM('user','assistant') NOT NULL,
         content TEXT NOT NULL,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (thread_id) REFERENCES chat_threads(id) ON DELETE CASCADE
       );
     `);

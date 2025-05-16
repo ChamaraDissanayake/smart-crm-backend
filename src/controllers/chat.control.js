@@ -7,18 +7,20 @@ const chatHandler = async (req, res) => {
         const prompt = req.body?.userInput;
         const userId = req.body?.userId;
         const companyId = req.body?.companyId;
+        const channel = req.body?.channel || 'bot';
 
-        if (!prompt || !userId) {
-            return res.status(400).json({ message: 'Prompt or user ID missing' });
+        if (!prompt || !userId || !companyId) {
+            return res.status(400).json({ message: 'Missing userId, companyId, or prompt' });
         }
 
-        const botResponse = await chatService.handleChat(userId, companyId, prompt);
+        const botResponse = await chatService.handleChat(userId, companyId, prompt, channel);
         return res.json({ botResponse });
     } catch (error) {
         console.error('Chat error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };
+
 
 module.exports = {
     chatHandler,
