@@ -1,3 +1,5 @@
+// src/routes/index.route.js
+
 const { Router } = require('express');
 const userRoutes = require('./user.route');
 const fileRoutes = require('./files.route');

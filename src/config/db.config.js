@@ -1,3 +1,5 @@
+// src/config/db.config.js
+
 const mysql = require('mysql2/promise');
 const dotenv = require('dotenv');
 dotenv.config();
@@ -165,6 +167,51 @@ const initDB = async () => {
         FOREIGN KEY (subscription_id) REFERENCES company_subscriptions(id) ON DELETE CASCADE
       );
     `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS facebook_integrations (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL,
+        access_token TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS whatsapp_integrations (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL,
+        company_id VARCHAR(36) NOT NULL,
+        access_token TEXT NOT NULL,
+        whatsapp_business_account_id VARCHAR(255) NOT NULL,
+        phone_number_id VARCHAR(255) NOT NULL,
+        phone_number VARCHAR(20) NOT NULL,
+        business_name VARCHAR(255),
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_phone_number_id (phone_number_id)
+      );
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS whatsapp_templates (
+        id VARCHAR(36) PRIMARY KEY,
+        integration_id VARCHAR(36) NOT NULL,
+        template_name VARCHAR(255) NOT NULL,
+        template_id VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        language VARCHAR(20) NOT NULL,
+        status VARCHAR(50) NOT NULL,
+        components JSON,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (integration_id) REFERENCES whatsapp_integrations(id) ON DELETE CASCADE
+      );
+    `);
+
   } finally {
     conn.release();
   }

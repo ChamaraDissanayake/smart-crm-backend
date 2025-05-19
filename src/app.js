@@ -30,6 +30,34 @@ initDB().then(() => {
     // View images
     app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+    // const {
+    //     getWhatsAppBusinessAccounts,
+    //     getWhatsAppAccountNumber
+    // } = require('./services/integration.service');
+
+    // Hardcoded test call
+    // (async () => {
+    //     try {
+    //         const testToken = 'EAAHwWOrf1fMBOyXZBD20dQ2W9KU1NRuMAumXJvG0efccwzc7Tp8OHo5i4JYjkK1lfH6pjjNayIFTboS3VSgZCGdbRFkgZAxpgoDlLRYLpxugrLxQhWioZAUHRIt8wZBoacihpQfA7RFn3HdwZAmF0QbI1FdsJLkIpTaT1p6X1XoUEoZCmyYj3hwnCG2AT78MnsiPw2Q0I7kXU9LNcK9SdDOQFQekDyHONZBrSdEkEpT6hra3Oqsi'; // Replace with actual token
+    //         const testWabaId = '272322805975497'
+    //         console.log('Testing getWhatsAppAccountNumber function...');
+    //         const wa = await getWhatsAppAccountNumber(testWabaId, testToken);
+    //         console.log('WhatsApp Business Accounts:', wa);
+    //     } catch (error) {
+    //         console.error('Test failed:', error);
+    //     }
+    // })();
+    // (async () => {
+    //     try {
+    //         const testToken = 'EAAHwWOrf1fMBOyXZBD20dQ2W9KU1NRuMAumXJvG0efccwzc7Tp8OHo5i4JYjkK1lfH6pjjNayIFTboS3VSgZCGdbRFkgZAxpgoDlLRYLpxugrLxQhWioZAUHRIt8wZBoacihpQfA7RFn3HdwZAmF0QbI1FdsJLkIpTaT1p6X1XoUEoZCmyYj3hwnCG2AT78MnsiPw2Q0I7kXU9LNcK9SdDOQFQekDyHONZBrSdEkEpT6hra3Oqsi'; // Replace with actual token
+    //         console.log('Testing WhatsApp Business Accounts function...');
+    //         const wa = await getWhatsAppBusinessAccounts(testToken);
+    //         console.log('WhatsApp Business Accounts:', wa);
+    //     } catch (error) {
+    //         console.error('Test failed:', error);
+    //     }
+    // })();
+
     // Start server
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -14,15 +14,11 @@ const handleChat = async (userId, companyId, prompt, channel = 'bot') => {
 
     // Step 3: Get past messages
     const pastMessages = await chatModel.getMessagesByThread({ threadId, limit: 10, offset: 0 });
-    console.log('Chamara pastMessages', pastMessages);
 
     const chatHistory = pastMessages.reverse().map(msg => ({
         role: msg.role,
         content: msg.content,
     }));
-
-    console.log('Chamara chatHistory', chatHistory);
-
 
     // Step 4: Get company chatbot instruction
     const company = await companyModel.findById(companyId);
@@ -33,7 +29,6 @@ const handleChat = async (userId, companyId, prompt, channel = 'bot') => {
         { role: 'system', content: instruction },
         ...chatHistory,
     ];
-    // console.log('Chamara deep seek', messages);
 
     // Step 6: Get assistant response
     const response = await openai.chat.completions.create({

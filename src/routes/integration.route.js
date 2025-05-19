@@ -1,12 +1,11 @@
 const express = require('express');
+const router = express.Router();
 const integrationController = require('../controllers/integration.control');
 
-const router = express.Router();
-
-// Redirect user to Facebook Login URL
+// 🔵 Facebook Login Routes
 router.get('/facebook/login', integrationController.redirectToFacebookLogin);
-
-// Facebook OAuth callback handler
 router.get('/facebook/callback', integrationController.handleFacebookCallback);
+router.get('/facebook/status', integrationController.getIntegrationStatus);
+router.post('/facebook/disconnect', integrationController.disconnectIntegration);
 
 module.exports = router;

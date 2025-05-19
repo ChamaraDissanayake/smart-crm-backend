@@ -17,7 +17,6 @@ export const sendMessageController = async (req, res) => {
 
 export const receiveMessageWebhook = async (req, res) => {
     const { From, Body } = req.body;
-    console.log("Chamara", req.body);
 
     try {
         await storeIncomingMessage(From, Body);

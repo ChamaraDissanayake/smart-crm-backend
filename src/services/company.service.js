@@ -66,6 +66,10 @@ const getUserCompanies = async (userId) => {
     return await companyModel.findByUserId(userId);
 };
 
+const getSelectedCompanyByUserId = async (userId) => {
+    return await companyModel.getSelectedCompanyByUserId(userId);
+};
+
 const addCompanyMember = async (companyId, userId, role) => {
     const company = await companyModel.findById(companyId);
     if (!company) {
@@ -104,6 +108,7 @@ module.exports = {
     updateCompany,
     deleteCompany,
     getUserCompanies,
+    getSelectedCompanyByUserId,
     addCompanyMember,
     removeCompanyMember,
     getMyRole,
