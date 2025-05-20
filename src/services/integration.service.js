@@ -4,7 +4,8 @@ const integrationModel = require('../models/integration.model');
 
 const FACEBOOK_APP_ID = process.env.FB_APP_ID;
 const FACEBOOK_APP_SECRET = process.env.FB_APP_SECRET;
-const REDIRECT_URI = 'http://localhost:3000/api/integration/facebook/callback';
+const REDIRECT_URI = `${process.env.BASE_URL}/${process.env.FB_REDIRECT_URI}` || 'http://localhost:3000/api/integration/facebook/callback';
+const BASE_GRAPH_URI = process.env.BASE_GRAPH_URI || 'https://graph.facebook.com/v22.0';
 
 const getFacebookLoginURL = (userId) => {
     const scope = [
@@ -24,7 +25,7 @@ const getFacebookLoginURL = (userId) => {
 };
 
 const exchangeCodeForToken = async (code) => {
-    const response = await axios.get('https://graph.facebook.com/v20.0/oauth/access_token', {
+    const response = await axios.get(`${BASE_GRAPH_URI}/oauth/access_token`, {
         params: {
             client_id: FACEBOOK_APP_ID,
             client_secret: FACEBOOK_APP_SECRET,
@@ -36,7 +37,7 @@ const exchangeCodeForToken = async (code) => {
 };
 
 const getUserProfile = async (accessToken) => {
-    const response = await axios.get('https://graph.facebook.com/me', {
+    const response = await axios.get(`${BASE_GRAPH_URI}/me`, {
         params: {
             fields: 'id,name,email'
         },
@@ -51,7 +52,7 @@ const getWhatsAppBusinessAccounts = async (userAccessToken) => {
     try {
         // Step 1: Get the list of businesses the user manages
         const businessRes = await axios.get(
-            `https://graph.facebook.com/v20.0/me/businesses?access_token=${userAccessToken}`
+            `${BASE_GRAPH_URI}/me/businesses?access_token=${userAccessToken}`
         );
 
         const businesses = businessRes.data.data;
@@ -67,7 +68,7 @@ const getWhatsAppBusinessAccounts = async (userAccessToken) => {
         for (const business of businesses) {
             try {
                 const wabaRes = await axios.get(
-                    `https://graph.facebook.com/v20.0/${business.id}/owned_whatsapp_business_accounts?access_token=${userAccessToken}`
+                    `${BASE_GRAPH_URI}/${business.id}/owned_whatsapp_business_accounts?access_token=${userAccessToken}`
                 );
 
                 const whatsappAccounts = wabaRes.data.data;
@@ -85,7 +86,7 @@ const getWhatsAppBusinessAccounts = async (userAccessToken) => {
 };
 
 const getWhatsAppAccountNumber = async (wabaId, token) => {
-    const response = await axios.get(`https://graph.facebook.com/v20.0/${wabaId}/phone_numbers?access_token=${token}`);
+    const response = await axios.get(`${BASE_GRAPH_URI}/${wabaId}/phone_numbers?access_token=${token}`);
     return response.data.data; // Returns array of phone number objects with all their properties
 }
 
@@ -102,29 +103,6 @@ const storeWhatsAppIntegration = async (userId, companyId, token, waba, phone) =
         phoneNumber,
         businessName
     });
-};
-
-const registerWhatsappNumber = async (phoneNumberId, accessToken) => {
-    try {
-        const response = await axios.post(
-            `https://graph.facebook.com/v20.0/${phoneNumberId}/register`,
-            {
-                messaging_product: "whatsapp"
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json'
-                }
-            }
-        );
-
-        console.log(`✅ Phone number ${phoneNumberId} registered successfully.`);
-        return response.data;
-    } catch (error) {
-        console.error(`❌ Failed to register phone number ${phoneNumberId}:`, error.response?.data || error.message);
-        throw error;
-    }
 };
 
 const storeFacebookIntegration = async (userId, accessToken, userInfo) => {
@@ -148,6 +126,5 @@ module.exports = {
     removeFacebookIntegration,
     getWhatsAppBusinessAccounts,
     storeWhatsAppIntegration,
-    getWhatsAppAccountNumber,
-    registerWhatsappNumber
+    getWhatsAppAccountNumber
 };

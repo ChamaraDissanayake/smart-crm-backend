@@ -1,4 +1,3 @@
-const { v4: uuidv4 } = require('uuid');
 const openai = require('../config/deepseek.config');
 const chatModel = require('../models/chat.model');
 const companyModel = require('../models/company.model');

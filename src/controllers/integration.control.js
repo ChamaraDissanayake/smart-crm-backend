@@ -9,8 +9,7 @@ const {
   removeFacebookIntegration,
   getWhatsAppBusinessAccounts,
   storeWhatsAppIntegration,
-  getWhatsAppAccountNumber,
-  registerWhatsappNumber
+  getWhatsAppAccountNumber
 } = require('../services/integration.service');
 
 const { getSelectedCompanyByUserId } = require('../services/company.service');
@@ -49,15 +48,6 @@ const handleFacebookCallback = async (req, res) => {
 
           if (phones.length > 0) {
             for (const phone of phones) {
-              console.log('Chamara phone number going to register', phone);
-
-              try {
-                await registerWhatsappNumber(phone.id, token);
-              } catch (err) {
-                console.warn(`Skipping phone number ${phone.display_phone_number} - registration failed.`);
-                continue; // Skip storing if registration fails
-              }
-
               await storeWhatsAppIntegration(userId, companyData.id, token, waba, phone);
               console.log(`✅ Stored WhatsApp integration for WABA: ${waba.name}, Phone: ${phone.display_phone_number || phone.phone_number}`);
             }

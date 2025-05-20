@@ -197,21 +197,6 @@ const initDB = async () => {
       );
     `);
 
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS whatsapp_templates (
-        id VARCHAR(36) PRIMARY KEY,
-        integration_id VARCHAR(36) NOT NULL,
-        template_name VARCHAR(255) NOT NULL,
-        template_id VARCHAR(255) NOT NULL,
-        category VARCHAR(100) NOT NULL,
-        language VARCHAR(20) NOT NULL,
-        status VARCHAR(50) NOT NULL,
-        components JSON,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (integration_id) REFERENCES whatsapp_integrations(id) ON DELETE CASCADE
-      );
-    `);
-
   } finally {
     conn.release();
   }
