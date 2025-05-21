@@ -4,7 +4,7 @@ const companyModel = require('../models/company.model');
 
 const MODEL_NAME = 'deepseek-chat';
 
-const handleChat = async (userId, companyId, prompt, channel = 'bot') => {
+const handleChat = async (userId, companyId, prompt, channel = 'web') => {
     // Step 1: Get thread (or create if not exists)
     const threadId = await chatModel.findOrCreateThread({ userId, companyId, channel });
 

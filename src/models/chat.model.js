@@ -3,12 +3,12 @@ const { pool } = require('../config/db.config');
 const { v4: uuidv4 } = require('uuid');
 
 // ✅ Find or create a thread
-const findOrCreateThread = async ({ userId, companyId, channel = 'bot' }) => {
+const findOrCreateThread = async ({ userId, companyId, channel = 'web' }) => {
     const conn = await pool.getConnection();
     try {
         const [rows] = await conn.query(
             `SELECT id FROM chat_threads 
-             WHERE user_id = ? AND company_id = ? AND channel = ?
+             WHERE user_id = ? AND company_id = ? AND channel = ? AND is_active = TRUE
              ORDER BY created_at DESC LIMIT 1`,
             [userId, companyId, channel]
         );
@@ -17,9 +17,9 @@ const findOrCreateThread = async ({ userId, companyId, channel = 'bot' }) => {
 
         const threadId = uuidv4();
         await conn.query(
-            `INSERT INTO chat_threads (id, user_id, company_id, channel) 
-             VALUES (?, ?, ?, ?)`,
-            [threadId, userId, companyId, channel]
+            `INSERT INTO chat_threads (id, user_id, company_id, channel, is_active) 
+             VALUES (?, ?, ?, ?, ?)`,
+            [threadId, userId, companyId, channel, true]
         );
 
         return threadId;
@@ -48,7 +48,7 @@ const getMessagesByThread = async ({ threadId, limit = 10, offset = 0 }) => {
         const [rows] = await conn.query(
             `SELECT role, content, created_at 
              FROM chat_messages 
-             WHERE thread_id = ? 
+             WHERE thread_id = ?
              ORDER BY id DESC 
              LIMIT ? OFFSET ?`,
             [threadId, limit, offset]
@@ -60,14 +60,14 @@ const getMessagesByThread = async ({ threadId, limit = 10, offset = 0 }) => {
 };
 
 // ✅ Get full chat history for a user/company/channel
-const getChatHistory = async ({ userId, companyId, channel = 'bot', limit = 20, offset = 0 }) => {
+const getChatHistory = async ({ userId, companyId, channel = 'web', limit = 10, offset = 0 }) => {
     const conn = await pool.getConnection();
     try {
         const [rows] = await conn.query(
             `SELECT cm.role, cm.content, cm.created_at 
              FROM chat_threads ct
              JOIN chat_messages cm ON ct.id = cm.thread_id
-             WHERE ct.user_id = ? AND ct.company_id = ? AND ct.channel = ?
+             WHERE ct.user_id = ? AND ct.company_id = ? AND ct.channel = ? AND ct.is_active = TRUE
              ORDER BY cm.created_at DESC 
              LIMIT ? OFFSET ?`,
             [userId, companyId, channel, limit, offset]

@@ -1,31 +1,67 @@
 const { pool } = require('../config/db.config');
 const {
-    findOrCreateThread,
     createMessage,
     getMessagesByThread,
     getChatHistory,
     deleteOldMessages,
 } = require('./chat.model');
+const { v4: uuidv4 } = require('uuid');
 
-const getWhatsAppIntegration = async ({ userId, companyId }) => {
+const getWhatsAppIntegration = async ({ companyId, phoneNumberId }) => {
     const conn = await pool.getConnection();
     try {
-        const [rows] = await conn.query(
-            `SELECT access_token, phone_number_id 
-             FROM whatsapp_integrations 
-             WHERE user_id = ? AND company_id = ? AND is_active = TRUE 
-             LIMIT 1`,
-            [userId, companyId]
-        );
+        let query = `
+            SELECT access_token, phone_number_id, company_id 
+            FROM whatsapp_integrations 
+            WHERE is_active = TRUE
+        `;
+        const params = [];
+
+        if (companyId) {
+            query += ` AND company_id = ?`;
+            params.push(companyId);
+        } else if (phoneNumberId) {
+            query += ` AND phone_number_id = ?`;
+            params.push(phoneNumberId);
+        } else {
+            throw new Error('Either companyId or phoneNumberId must be provided');
+        }
+
+        query += ` LIMIT 1`;
+
+        const [rows] = await conn.query(query, params);
         return rows[0] || null;
     } finally {
         conn.release();
     }
 };
 
-// Wrapper for WhatsApp-specific usage (channel = 'whatsapp')
-const findOrCreateWhatsAppThread = async ({ userId, companyId }) => {
-    return await findOrCreateThread({ userId, companyId, channel: 'whatsapp' });
+const findOrCreateWhatsAppThread = async ({ customerId, companyId, assistantId }) => {
+    const conn = await pool.getConnection();
+    try {
+        const [threads] = await conn.query(
+            `SELECT id FROM chat_threads 
+                WHERE customer_id = ? AND company_id = ? AND channel = 'whatsapp' AND is_active = TRUE 
+                ORDER BY started_at DESC 
+                LIMIT 1`,
+            [customerId, companyId]
+        );
+
+        if (threads.length > 0) {
+            return threads[0].id;
+        }
+
+        const threadId = uuidv4();
+        await conn.query(
+            `INSERT INTO chat_threads (id, customer_id, company_id, assigned_agent_id, channel, is_active) 
+                VALUES (?, ?, ?, ?, 'whatsapp', TRUE)`,
+            [threadId, customerId, companyId, assistantId]
+        );
+
+        return threadId;
+    } finally {
+        conn.release();
+    }
 };
 
 const createWhatsAppMessage = async ({ thread_id, role, content }) => {

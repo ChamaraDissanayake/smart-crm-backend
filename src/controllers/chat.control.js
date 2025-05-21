@@ -7,7 +7,7 @@ const chatHandler = async (req, res) => {
         const prompt = req.body?.userInput;
         const userId = req.body?.userId;
         const companyId = req.body?.companyId;
-        const channel = req.body?.channel || 'bot';
+        const channel = req.body?.channel || 'web';
 
         if (!prompt || !userId || !companyId) {
             return res.status(400).json({ message: 'Missing userId, companyId, or prompt' });

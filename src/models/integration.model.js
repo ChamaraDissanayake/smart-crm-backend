@@ -55,11 +55,11 @@ const saveWhatsAppIntegration = async ({
     try {
         await conn.query(`
       INSERT INTO whatsapp_integrations (
-        id, user_id, company_id, access_token,
+        id, company_id, access_token,
         whatsapp_business_account_id, phone_number_id,
         phone_number, business_name
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE 
         access_token = VALUES(access_token),
         phone_number_id = VALUES(phone_number_id),
@@ -67,7 +67,7 @@ const saveWhatsAppIntegration = async ({
         business_name = VALUES(business_name),
         updated_at = CURRENT_TIMESTAMP
     `, [
-            id, userId, companyId, accessToken,
+            id, companyId, accessToken,
             whatsappBusinessAccountId, phoneNumberId,
             phoneNumber, businessName
         ]);
