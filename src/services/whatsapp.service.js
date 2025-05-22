@@ -1,3 +1,5 @@
+//src/services/whatsapp.service.js
+
 const axios = require('axios');
 const {
     findOrCreateWhatsAppThread,
@@ -5,6 +7,7 @@ const {
     getWhatsAppIntegration
 } = require('../models/whatsapp.model');
 const { getOrCreateCustomerByPhone } = require('../services/customer.service')
+const { emitToThread } = require('./helpers/socket.helper.service');
 
 const BASE_GRAPH_URI = process.env.BASE_GRAPH_URI || 'https://graph.facebook.com/v22.0';
 
@@ -52,12 +55,14 @@ const sendMessage = async ({ to, message, companyId }) => {
         content: message
     });
 
+    emitToThread(threadId, 'new-message', message);
+
     return { status: 'sent', response: res.data };
 };
 
 const handleIncomingMessage = async (data) => {
-    // const entry = data.entry?.[0];
-    // const changes = entry?.changes?.[0];
+    const entry = data.entry?.[0];
+    const changes = entry?.changes?.[0];
     const value = changes?.value;
 
     const messageObj = value?.messages?.[0];
@@ -83,12 +88,14 @@ const handleIncomingMessage = async (data) => {
     console.log(`🆔 phone_number_id: ${phoneNumberId}`);
     console.log(`💬 Message: ${text}`);
 
-    await saveMessageToThread({
+    const sent = await saveMessageToThread({
         phone: senderWaId,
         content: text,
         role: 'user',
         phoneNumberId // resolves companyId internally
     });
+
+    emitToThread(sent.threadId, 'new-message', text);
 };
 
 const saveMessageToThread = async ({ phone, content, role, companyId, phoneNumberId }) => {

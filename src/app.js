@@ -1,12 +1,39 @@
+//src/app.js
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const http = require('http');
 const { initDB } = require('./config/db.config');
 const routes = require('./routes/index.route');
 const errorHandler = require('./middleware/error');
 const path = require('path');
+const { setupSocket } = require('./services/helpers/socket.helper.service');
 
 const app = express();
+const server = http.createServer(app);
+
+// Configure CORS options
+const corsOptions = {
+    origin: process.env.FRONTEND_BASE_URL || 'http://localhost:4000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+};
+
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Initialize Socket.IO with CORS configuration
+setupSocket(server, {
+    cors: {
+        origin: process.env.FRONTEND_URL || 'http://localhost:4000',
+        methods: ['GET', 'POST'],
+        credentials: true
+    },
+    transports: ['websocket', 'polling'],
+    allowEIO3: true // For Socket.IO v2/v3 compatibility if needed
+});
 
 app.set('trust proxy', 1);
 
@@ -17,52 +44,31 @@ app.get("/test", (req, res) => {
 // Initialize database
 initDB().then(() => {
     // Middleware
-    app.use(cors());
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
     // Routes
     app.use('/api', routes);
 
-    // Error handling
-    app.use(errorHandler);
-
-    // View images
+    // Static files
     app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-    // const {
-    //     getWhatsAppBusinessAccounts,
-    //     getWhatsAppAccountNumber
-    // } = require('./services/integration.service');
-
-    // Hardcoded test call
-    // (async () => {
-    //     try {
-    //         const testToken = 'EAAHwWOrf1fMBOyXZBD20dQ2W9KU1NRuMAumXJvG0efccwzc7Tp8OHo5i4JYjkK1lfH6pjjNayIFTboS3VSgZCGdbRFkgZAxpgoDlLRYLpxugrLxQhWioZAUHRIt8wZBoacihpQfA7RFn3HdwZAmF0QbI1FdsJLkIpTaT1p6X1XoUEoZCmyYj3hwnCG2AT78MnsiPw2Q0I7kXU9LNcK9SdDOQFQekDyHONZBrSdEkEpT6hra3Oqsi'; // Replace with actual token
-    //         const testWabaId = '272322805975497'
-    //         console.log('Testing getWhatsAppAccountNumber function...');
-    //         const wa = await getWhatsAppAccountNumber(testWabaId, testToken);
-    //         console.log('WhatsApp Business Accounts:', wa);
-    //     } catch (error) {
-    //         console.error('Test failed:', error);
-    //     }
-    // })();
-    // (async () => {
-    //     try {
-    //         const testToken = 'EAAHwWOrf1fMBOyXZBD20dQ2W9KU1NRuMAumXJvG0efccwzc7Tp8OHo5i4JYjkK1lfH6pjjNayIFTboS3VSgZCGdbRFkgZAxpgoDlLRYLpxugrLxQhWioZAUHRIt8wZBoacihpQfA7RFn3HdwZAmF0QbI1FdsJLkIpTaT1p6X1XoUEoZCmyYj3hwnCG2AT78MnsiPw2Q0I7kXU9LNcK9SdDOQFQekDyHONZBrSdEkEpT6hra3Oqsi'; // Replace with actual token
-    //         console.log('Testing WhatsApp Business Accounts function...');
-    //         const wa = await getWhatsAppBusinessAccounts(testToken);
-    //         console.log('WhatsApp Business Accounts:', wa);
-    //     } catch (error) {
-    //         console.error('Test failed:', error);
-    //     }
-    // })();
+    // Error handling - must be after all other middleware/routes
+    app.use(errorHandler);
 
     // Start server
     const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    server.listen(PORT, () => {
+        console.log(`✅ Server running on port ${PORT}`);
+    });
 }).catch(err => {
-    console.error("❌ Database connection failed:", err);
+    console.error('❌ Database connection failed:', err);
+    process.exit(1);
 });
 
-module.exports = app;
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+    console.error('Unhandled Rejection:', err);
+});
+
+module.exports = { app, server };
