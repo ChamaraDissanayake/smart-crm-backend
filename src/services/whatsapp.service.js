@@ -49,13 +49,21 @@ const sendMessage = async ({ to, message, companyId }) => {
         'assignedId': null
     });
 
-    await createWhatsAppMessage({
+    const msgId = await createWhatsAppMessage({
         thread_id: threadId,
         role: 'assistant',
         content: message
     });
 
-    emitToThread(threadId, 'new-message', message);
+    const emmitingData = {
+        id: msgId,
+        threadId,
+        content: message,
+        role: "assistant",
+        createdAt: new Date().toISOString(),
+    }
+
+    emitToThread(threadId, emmitingData);
 
     return { status: 'sent', response: res.data };
 };
@@ -82,20 +90,24 @@ const handleIncomingMessage = async (data) => {
         return;
     }
 
-    console.log('📥 Received WhatsApp message:');
-    console.log(`🧑 From (waId): ${senderWaId}`);
-    console.log(`☎️ To (display): ${receiverPhone}`);
-    console.log(`🆔 phone_number_id: ${phoneNumberId}`);
     console.log(`💬 Message: ${text}`);
 
-    const sent = await saveMessageToThread({
+    const savedData = await saveMessageToThread({
         phone: senderWaId,
         content: text,
         role: 'user',
         phoneNumberId // resolves companyId internally
     });
 
-    emitToThread(sent.threadId, 'new-message', text);
+    const emmitingData = {
+        id: savedData.msgId,
+        threadId: savedData.threadId,
+        content: text,
+        role: "user",
+        createdAt: new Date().toISOString(),
+    }
+
+    emitToThread(savedData.threadId, emmitingData);
 };
 
 const saveMessageToThread = async ({ phone, content, role, companyId, phoneNumberId }) => {
@@ -123,13 +135,13 @@ const saveMessageToThread = async ({ phone, content, role, companyId, phoneNumbe
     });
 
     // 💬 Create message
-    await createWhatsAppMessage({
+    const msgId = await createWhatsAppMessage({
         thread_id: threadId,
         role,
         content
     });
 
-    return { customerId, threadId, companyId };
+    return { customerId, threadId, companyId, msgId };
 };
 
 module.exports = {

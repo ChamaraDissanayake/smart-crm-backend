@@ -124,7 +124,7 @@ const initDB = async () => {
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS chat_messages (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id VARCHAR(36) NOT NULL,
         thread_id VARCHAR(36) NOT NULL,
         role ENUM('user','assistant') NOT NULL,
         content TEXT NOT NULL,

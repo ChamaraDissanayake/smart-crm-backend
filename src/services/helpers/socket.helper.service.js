@@ -30,7 +30,10 @@ const setupSocket = (server, socketConfig = {}) => {
     return io;
 };
 
-const emitToThread = (threadId, eventName, data) => {
+const emitToThread = (threadId, data) => {
+
+    const eventName = 'new-message';
+
     if (!io) {
         console.warn('Socket.IO not initialized');
         return;

@@ -31,11 +31,16 @@ const findOrCreateThread = async ({ userId, companyId, channel = 'web' }) => {
 // ✅ Create a message
 const createMessage = async ({ thread_id, role, content }) => {
     const conn = await pool.getConnection();
+    const msg_id = uuidv4();
     try {
         await conn.query(
-            `INSERT INTO chat_messages (thread_id, role, content) VALUES (?, ?, ?)`,
-            [thread_id, role, content]
+            `INSERT INTO chat_messages (id, thread_id, role, content) VALUES (?, ?, ?, ?)`,
+            [msg_id, thread_id, role, content]
         );
+        return msg_id;
+    } catch (err) {
+        console.error("Failed to insert message:", err);
+        throw err;
     } finally {
         conn.release();
     }
