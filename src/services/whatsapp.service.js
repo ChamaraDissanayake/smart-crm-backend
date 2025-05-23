@@ -3,7 +3,7 @@
 const axios = require('axios');
 const {
     findOrCreateWhatsAppThread,
-    createWhatsAppMessage,
+    saveWhatsAppMessage,
     getWhatsAppIntegration
 } = require('../models/whatsapp.model');
 const { getOrCreateCustomerByPhone } = require('../services/customer.service')
@@ -49,7 +49,7 @@ const sendMessage = async ({ to, message, companyId }) => {
         'assignedId': null
     });
 
-    const msgId = await createWhatsAppMessage({
+    const msgId = await saveWhatsAppMessage({
         thread_id: threadId,
         role: 'assistant',
         content: message
@@ -135,7 +135,7 @@ const saveMessageToThread = async ({ phone, content, role, companyId, phoneNumbe
     });
 
     // 💬 Create message
-    const msgId = await createWhatsAppMessage({
+    const msgId = await saveWhatsAppMessage({
         thread_id: threadId,
         role,
         content

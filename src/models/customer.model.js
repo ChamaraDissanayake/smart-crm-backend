@@ -39,7 +39,43 @@ const insertCustomer = async (customer) => {
     }
 };
 
+const getCustomerById = async ({ customerId }) => {
+    const conn = await pool.getConnection();
+    try {
+        const [rows] = await conn.query(
+            `SELECT name, phone, email
+             FROM customer
+             WHERE id = ?`,
+            [customerId]
+        );
+        return rows;
+    } finally {
+        conn.release();
+    }
+}
+
+const getCustomersByIds = async ({ customerIds }) => {
+    if (!Array.isArray(customerIds) || customerIds.length === 0) {
+        return []; // or throw an error if you want to enforce input
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        const placeholders = customerIds.map(() => '?').join(', ');
+        const [rows] = await conn.query(
+            `SELECT id, name, phone, email FROM customer WHERE id IN (${placeholders})`,
+            customerIds
+        );
+        return rows; // rows will already be an array of objects
+    } finally {
+        conn.release();
+    }
+};
+
+
 module.exports = {
     findCustomerByPhone,
     insertCustomer,
+    getCustomerById,
+    getCustomersByIds
 };

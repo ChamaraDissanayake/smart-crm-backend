@@ -45,6 +45,28 @@ const handleChat = async (userId, companyId, prompt, channel = 'web') => {
     return assistantReply;
 };
 
+// send company id and get chat threads -> id, customer_id, channel
+// collect all customer ids and get their details -> id, name, phone, email
+const getChatHeadsByCompanyId = async (companyId, channel) => {
+    try {
+        return await chatModel.getChatThreadsWithCustomerInfo({ companyId, channel });
+    } catch (err) {
+        console.error(`Error in getChatHeadsByCompanyId for companyId ${companyId}:`, err.message);
+        throw err; // Let the controller handle how to respond to the client
+    }
+};
+
+const getChatHistory = async (threadId, offset) => {
+    try {
+        return await chatModel.getChatHistory({ threadId, offset });
+    } catch (err) {
+        console.error(`Error in getChatHistory for threadId ${threadId}:`, err.message);
+        throw err; // Let the controller handle how to respond to the client
+    }
+};
+
 module.exports = {
     handleChat,
+    getChatHeadsByCompanyId,
+    getChatHistory
 };

@@ -1,6 +1,6 @@
 const { pool } = require('../config/db.config');
 const {
-    createMessage,
+    saveMessage,
     getMessagesByThread,
     getChatHistory,
     deleteOldMessages,
@@ -64,8 +64,8 @@ const findOrCreateWhatsAppThread = async ({ customerId, companyId, assistantId }
     }
 };
 
-const createWhatsAppMessage = async ({ thread_id, role, content }) => {
-    return await createMessage({ thread_id, role, content });
+const saveWhatsAppMessage = async ({ thread_id, role, content }) => {
+    return await saveMessage({ thread_id, role, content });
 };
 
 const getWhatsAppMessagesByThread = async ({ threadId, limit = 10, offset = 0 }) => {
@@ -78,7 +78,7 @@ const getWhatsAppChatHistory = async ({ userId, companyId, limit = 20, offset = 
 
 module.exports = {
     findOrCreateWhatsAppThread,
-    createWhatsAppMessage,
+    saveWhatsAppMessage,
     getWhatsAppMessagesByThread,
     getWhatsAppChatHistory,
     deleteOldMessages,
