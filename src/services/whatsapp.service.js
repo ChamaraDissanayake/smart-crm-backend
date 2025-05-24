@@ -1,19 +1,54 @@
 //src/services/whatsapp.service.js
-
 const axios = require('axios');
 const {
     findOrCreateWhatsAppThread,
     saveWhatsAppMessage,
     getWhatsAppIntegration
 } = require('../models/whatsapp.model');
-const { getOrCreateCustomerByPhone } = require('../services/customer.service')
+const { getOrCreateCustomerByPhone } = require('./customer.service');
 const { emitToThread } = require('./helpers/socket.helper.service');
 
 const BASE_GRAPH_URI = process.env.BASE_GRAPH_URI || 'https://graph.facebook.com/v22.0';
 
-const sendMessage = async ({ to, message, companyId }) => {
+const saveAndEmitWhatsAppMessage = async ({ phone, content, role, companyId, phoneNumberId }) => {
+    // Inline logic to resolve companyId, customerId, threadId
+    if (!companyId && phoneNumberId) {
+        const integration = await getWhatsAppIntegration({ phoneNumberId });
+        if (!integration) throw new Error('No integration found for phoneNumberId');
+        companyId = integration.company_id;
+    }
 
-    // 👉 Get integration from DB
+    if (!companyId) throw new Error('Missing companyId and phoneNumberId — can’t resolve company context');
+
+    const customerId = await getOrCreateCustomerByPhone({ phone, companyId });
+
+    const thread = await findOrCreateWhatsAppThread({
+        customerId,
+        companyId
+    });
+
+    const threadId = thread.id;
+
+    // Save message
+    const msgId = await saveWhatsAppMessage({
+        thread_id: threadId,
+        role,
+        content
+    });
+
+    // Emit over socket
+    emitToThread(threadId, {
+        id: msgId,
+        threadId,
+        content,
+        role,
+        createdAt: new Date().toISOString(),
+    });
+
+    return { threadId, msgId };
+};
+
+const sendMessage = async ({ to, message, companyId }) => {
     const integration = await getWhatsAppIntegration({ companyId });
 
     if (!integration) {
@@ -39,43 +74,20 @@ const sendMessage = async ({ to, message, companyId }) => {
         }
     );
 
-    // 💬 Ensure customer exists and retrieve customerId
-    const customerId = await getOrCreateCustomerByPhone({ phone: to, companyId });
-
-    // 💬 Ensure chat thread exists
-    const threadId = await findOrCreateWhatsAppThread({
-        customerId,
-        companyId,
-        'assignedId': null
-    });
-
-    const msgId = await saveWhatsAppMessage({
-        thread_id: threadId,
-        role: 'assistant',
-        content: message
-    });
-
-    const emmitingData = {
-        id: msgId,
-        threadId,
+    await saveAndEmitWhatsAppMessage({
+        phone: to,
         content: message,
-        role: "assistant",
-        createdAt: new Date().toISOString(),
-    }
-
-    emitToThread(threadId, emmitingData);
+        role: 'assistant',
+        companyId
+    });
 
     return { status: 'sent', response: res.data };
 };
 
 const handleIncomingMessage = async (data) => {
-    const entry = data.entry?.[0];
-    const changes = entry?.changes?.[0];
-    const value = changes?.value;
-
-    const messageObj = value?.messages?.[0];
-    const phoneNumberId = value?.metadata?.phone_number_id;
-    const receiverPhone = value?.metadata?.display_phone_number;
+    const messageObj = data?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+    const phoneNumberId = data?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+    const receiverPhone = data?.entry?.[0]?.changes?.[0]?.value?.metadata?.display_phone_number;
 
     if (!messageObj || messageObj.type !== 'text') {
         console.warn('⚠️ Ignored non-text or missing message.');
@@ -92,59 +104,15 @@ const handleIncomingMessage = async (data) => {
 
     console.log(`💬 Message: ${text}`);
 
-    const savedData = await saveMessageToThread({
+    await saveAndEmitWhatsAppMessage({
         phone: senderWaId,
         content: text,
         role: 'user',
-        phoneNumberId // resolves companyId internally
+        phoneNumberId
     });
-
-    const emmitingData = {
-        id: savedData.msgId,
-        threadId: savedData.threadId,
-        content: text,
-        role: "user",
-        createdAt: new Date().toISOString(),
-    }
-
-    emitToThread(savedData.threadId, emmitingData);
-};
-
-const saveMessageToThread = async ({ phone, content, role, companyId, phoneNumberId }) => {
-    // Resolve companyId from phoneNumberId if not directly provided
-    if (!companyId && phoneNumberId) {
-        const integration = await getWhatsAppIntegration({ phoneNumberId });
-        if (!integration) {
-            throw new Error('No integration found for phoneNumberId');
-        }
-        companyId = integration.company_id;
-    }
-
-    if (!companyId) {
-        throw new Error('Missing companyId and phoneNumberId — can’t resolve company context');
-    }
-
-    // 💬 Ensure customer exists and retrieve customerId
-    const customerId = await getOrCreateCustomerByPhone({ phone, companyId });
-
-    // 💬 Ensure chat thread exists
-    const threadId = await findOrCreateWhatsAppThread({
-        customerId,
-        companyId,
-        assignedId: null
-    });
-
-    // 💬 Create message
-    const msgId = await saveWhatsAppMessage({
-        thread_id: threadId,
-        role,
-        content
-    });
-
-    return { customerId, threadId, companyId, msgId };
 };
 
 module.exports = {
     sendMessage,
     handleIncomingMessage
-}
+};
