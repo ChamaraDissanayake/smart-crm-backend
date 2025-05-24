@@ -7,6 +7,7 @@ const {
 } = require('../models/whatsapp.model');
 const { getOrCreateCustomerByPhone } = require('./customer.service');
 const { emitToThread } = require('./helpers/socket.helper.service');
+const { generateBotResponse } = require('./chat.service');
 
 const BASE_GRAPH_URI = process.env.BASE_GRAPH_URI || 'https://graph.facebook.com/v22.0';
 
@@ -45,7 +46,7 @@ const saveAndEmitWhatsAppMessage = async ({ phone, content, role, companyId, pho
         createdAt: new Date().toISOString(),
     });
 
-    return { threadId, msgId };
+    return { thread };
 };
 
 const sendMessage = async ({ to, message, companyId }) => {
@@ -104,12 +105,31 @@ const handleIncomingMessage = async (data) => {
 
     console.log(`💬 Message: ${text}`);
 
-    await saveAndEmitWhatsAppMessage({
+    const { thread } = await saveAndEmitWhatsAppMessage({
         phone: senderWaId,
         content: text,
         role: 'user',
         phoneNumberId
     });
+
+    if (thread.current_handler === 'bot') {
+        const { botResponse } = await generateBotResponse({
+            threadId: thread.id,
+            companyId: thread.company_id
+        });
+
+        // Use regex to extract BOT_NOTE
+        const noteMatch = botResponse.match(/\(BOT_NOTE:\s*(.*?)\)/);
+
+        const botNote = noteMatch ? noteMatch[1].trim() : null;
+        const botReply = botResponse.replace(/\(BOT_NOTE:\s*.*?\)/, '').trim();
+
+        //botNote use to generate leads
+        console.log('Chamara bot note', botNote);
+
+        // Send only the clean message to customer
+        await sendMessage({ to: senderWaId, message: botReply, companyId: thread.company_id });
+    }
 };
 
 module.exports = {

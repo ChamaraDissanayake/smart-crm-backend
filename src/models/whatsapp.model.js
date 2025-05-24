@@ -2,7 +2,6 @@ const { pool } = require('../config/db.config');
 const {
     saveMessage,
     getMessagesByThread,
-    getChatHistory,
     deleteOldMessages,
 } = require('./chat.model');
 const { v4: uuidv4 } = require('uuid');
@@ -43,7 +42,7 @@ const findOrCreateWhatsAppThread = async ({ customerId, companyId, channel = 'wh
 
         // Lock matching threads for this customer/company/channel
         const [threads] = await conn.query(
-            `SELECT id, current_handler, assigned_agent_id FROM chat_threads 
+            `SELECT id, current_handler, assigned_agent_id, company_id FROM chat_threads 
              WHERE customer_id = ? AND company_id = ? AND channel = ? AND is_active = TRUE 
              ORDER BY started_at DESC 
              LIMIT 1
@@ -65,7 +64,7 @@ const findOrCreateWhatsAppThread = async ({ customerId, companyId, channel = 'wh
         );
 
         await conn.commit();
-        return { id: threadId, current_handler: 'bot', assigned_agent_id: null };
+        return { id: threadId, current_handler: 'bot', assigned_agent_id: null, company_id: companyId };
     } catch (err) {
         await conn.rollback();
         console.error('Error in findOrCreateThread:', err);
@@ -79,19 +78,14 @@ const saveWhatsAppMessage = async ({ thread_id, role, content }) => {
     return await saveMessage({ thread_id, role, content });
 };
 
-const getWhatsAppMessagesByThread = async ({ threadId, limit = 10, offset = 0 }) => {
+const getWhatsAppMessagesByThread = async ({ threadId, limit = 20, offset = 0 }) => {
     return await getMessagesByThread({ threadId, limit, offset });
-};
-
-const getWhatsAppChatHistory = async ({ userId, companyId, limit = 20, offset = 0 }) => {
-    return await getChatHistory({ userId, companyId, channel: 'whatsapp', limit, offset });
 };
 
 module.exports = {
     findOrCreateWhatsAppThread,
     saveWhatsAppMessage,
     getWhatsAppMessagesByThread,
-    getWhatsAppChatHistory,
     deleteOldMessages,
     getWhatsAppIntegration
 };

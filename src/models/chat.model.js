@@ -47,7 +47,7 @@ const saveMessage = async ({ thread_id, role, content }) => {
 };
 
 // ✅ Get messages by thread
-const getMessagesByThread = async ({ threadId, limit = 10, offset = 0 }) => {
+const getMessagesByThread = async ({ threadId, limit = 20, offset = 0 }) => {
     const conn = await pool.getConnection();
     try {
         const [rows] = await conn.query(
@@ -64,9 +64,10 @@ const getMessagesByThread = async ({ threadId, limit = 10, offset = 0 }) => {
     }
 };
 
-const getChatHistory = async ({ threadId, offset = 0 }) => {
+const getChatHistory = async ({ threadId, limit = 20, offset = 0 }) => {
+    limit = Number(limit) || 20;
     offset = Number(offset) || 0;
-    const limit = 20;
+
     const conn = await pool.getConnection();
     try {
         const [rows] = await conn.query(
