@@ -15,10 +15,23 @@ const server = http.createServer(app);
 
 // Configure CORS options
 const corsOptions = {
-    origin: process.env.FRONTEND_BASE_URL || 'http://localhost:4000',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    origin: function (origin, callback) {
+        const allowedOrigins = [
+            'https://crm.smartglobalhub.com',
+            'https://crmb.smartglobalhub.com',
+            'http://localhost:3000',
+            'http://localhost:4000',
+        ];
+
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    credentials: true,
 };
 
 // Apply CORS middleware
@@ -40,6 +53,19 @@ app.set('trust proxy', 1);
 app.get("/test", (req, res) => {
     res.send("Chamara CRM API working");
 });
+
+// const { generateBotResponse } = require('./services/chat.service');
+
+// (async () => {
+//     try {
+//         const { reply, threadId } = await generateBotResponse({ threadId: 'e832ca07-fdfa-49f4-9e56-1261e463492e', companyId: '1d4cedfe-800c-4c42-a76f-8db04466c5c6' });
+//         console.log('Chamara reply', reply);
+//         console.log('Chamara threadId', threadId);
+
+//     } catch (err) {
+//         console.error('Error fetching chat heads:', err);
+//     }
+// })();
 
 // Initialize database
 initDB().then(() => {
