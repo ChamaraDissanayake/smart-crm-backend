@@ -1,14 +1,13 @@
 const express = require('express');
 const {
-    // chatHandler,
     getChatHeadsByCompanyId,
-    getChatHistoryByThreadId
+    getChatHistoryByThreadId,
+    webChatHandler
 } = require('../controllers/chat.control');
-const authenticate = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/chat-heads', authenticate, getChatHeadsByCompanyId);
-router.get('/chat-history', authenticate, getChatHistoryByThreadId);
-
+router.get('/chat-heads', getChatHeadsByCompanyId);
+router.get('/chat-history', getChatHistoryByThreadId);
+router.post('/chat-web', webChatHandler);
 module.exports = router;

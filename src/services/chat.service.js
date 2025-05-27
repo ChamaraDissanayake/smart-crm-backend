@@ -26,8 +26,18 @@ const generateBotResponse = async ({ threadId, companyId }) => {
     });
 
     const assistantReply = response.choices[0].message.content;
+    console.log('Chamara assistantReply', assistantReply);
 
-    return { botResponse: assistantReply };
+    // Extract all BOT_NOTE values
+    const noteMatches = [...assistantReply.matchAll(/\(BOT_NOTE:\s*(.*?)\)/g)];
+    const botNotes = noteMatches.map(match => match[1].trim());
+
+    // Remove all BOT_NOTE mentions from the final reply
+    const botReply = assistantReply.replace(/\(BOT_NOTE:\s*.*?\)/g, '').trim();
+    //botNote use to generate leads
+    console.log('Chamara bot note', botNotes);
+
+    return { botResponse: botReply };
 };
 
 // send company id and get chat threads -> id, customer_id, channel
@@ -50,8 +60,28 @@ const getChatHistory = async (threadId, limit, offset) => {
     }
 };
 
+const findOrCreateThread = async ({ customerId, companyId, channel = 'web' }) => {
+    try {
+        return await chatModel.findOrCreateThread({ customerId, companyId, channel });
+    } catch (err) {
+        console.error(`Error in findOrCreateThread for customerId ${customerId}, companyId ${companyId}:`, err.message);
+        throw err; // Let the controller handle how to respond to the client
+    }
+};
+
+const saveMessage = async ({ threadId, role, content }) => {
+    try {
+        return await chatModel.saveMessage({ thread_id: threadId, role, content });
+    } catch (err) {
+        console.error(`Error in saveMessage for threadId ${threadId}:`, err.message);
+        throw err; // Let the controller handle how to respond to the client
+    }
+};
+
 module.exports = {
     generateBotResponse,
     getChatHeadsByCompanyId,
-    getChatHistory
+    getChatHistory,
+    findOrCreateThread,
+    saveMessage
 };

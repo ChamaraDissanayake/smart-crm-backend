@@ -16,24 +16,24 @@ const findCustomerByPhone = async ({ phone, companyId }) => {
 const insertCustomer = async (customer) => {
     const conn = await pool.getConnection();
     try {
-        const fields = ['id', 'phone', 'company_id'];
-        const values = [customer.id, customer.phone, customer.companyId];
+        const query = `
+            INSERT INTO customers (id, name, phone, email, company_id)
+            VALUES (?, ?, ?, ?, ?)
+        `;
 
-        if (customer.name) {
-            fields.push('name');
-            values.push(customer.name);
-        }
-
-        if (customer.email) {
-            fields.push('email');
-            values.push(customer.email);
-        }
-
-        const placeholders = fields.map(() => '?').join(', ');
-        const query = `INSERT INTO customers (${fields.join(', ')}) VALUES (${placeholders})`;
+        const values = [
+            customer.id,
+            customer.name,
+            customer.phone,
+            customer.email,
+            customer.companyId,
+        ];
 
         await conn.query(query, values);
         return { id: customer.id };
+    } catch (err) {
+        console.error('Error inserting customer:', err);
+        throw new Error('Failed to insert customer');
     } finally {
         conn.release();
     }

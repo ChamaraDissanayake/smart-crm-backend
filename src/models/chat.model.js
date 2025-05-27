@@ -1,27 +1,27 @@
 // src/models/chat.model.js
+
 const { pool } = require('../config/db.config');
 const { v4: uuidv4 } = require('uuid');
 
 // ✅ Find or create a thread
-const findOrCreateThread = async ({ userId, companyId, channel = 'web' }) => {
+const findOrCreateThread = async ({ customerId, companyId, channel = 'web' }) => {
     const conn = await pool.getConnection();
     try {
         const [rows] = await conn.query(
             `SELECT id FROM chat_threads 
-             WHERE user_id = ? AND company_id = ? AND channel = ? AND is_active = TRUE
+             WHERE customer_id = ? AND company_id = ? AND channel = ? AND is_active = TRUE
              ORDER BY created_at DESC LIMIT 1`,
-            [userId, companyId, channel]
+            [customerId, companyId, channel]
         );
 
         if (rows.length > 0) return rows[0].id;
 
         const threadId = uuidv4();
         await conn.query(
-            `INSERT INTO chat_threads (id, user_id, company_id, channel, is_active) 
+            `INSERT INTO chat_threads (id, customer_id, company_id, channel, is_active) 
              VALUES (?, ?, ?, ?, ?)`,
-            [threadId, userId, companyId, channel, true]
+            [threadId, customerId, companyId, channel, true]
         );
-
         return threadId;
     } finally {
         conn.release();

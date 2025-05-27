@@ -8,6 +8,7 @@ const companyRoutes = require('./company.route');
 const subscriptionRoutes = require('./subscription.route');
 const integrationRoutes = require('./integration.route');
 const whatsappnRoutes = require('./whatsapp.route');
+const customerRoutes = require('./customer.route');
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.use('/chat', chatRoutes);
 router.use('/subscriptions', subscriptionRoutes);
 router.use('/integration', integrationRoutes);
 router.use('/whatsapp', whatsappnRoutes);
+router.use('/customer', customerRoutes);
 
 // 404 handler
 router.use((req, res) => {

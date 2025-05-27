@@ -25,14 +25,49 @@ const getChatHistoryByThreadId = async (req, res) => {
             return res.status(400).json({ error: 'Thread id is required' });
         }
         const data = await chatService.getChatHistory(threadId, limit = 20, offset);
+
         res.json(data);
+    } catch (err) {
+        console.log(err);
+        res.status(err.statusCode || 500).json({ error: err.message });
+    }
+};
+
+const webChatHandler = async (req, res) => {
+    const { threadId, companyId, message } = req.body;
+
+    if (!threadId || !companyId || !message) {
+        return res.status(400).json({ error: 'threadId, companyId and message are required' });
+    }
+
+    try {
+        // Save user message
+        await chatService.saveMessage({
+            threadId,
+            role: 'user',
+            content: message
+        });
+
+        // Generate bot response
+        const { botResponse } = await chatService.generateBotResponse({ threadId, companyId });
+
+        chatService.saveMessage({
+            threadId,
+            role: 'assistant',
+            content: botResponse
+        });
+
+        res.json({
+            threadId,
+            botResponse: botResponse
+        });
     } catch (err) {
         res.status(err.statusCode || 500).json({ error: err.message });
     }
 };
 
 module.exports = {
-    // chatHandler,
+    webChatHandler,
     getChatHeadsByCompanyId,
     getChatHistoryByThreadId
 };

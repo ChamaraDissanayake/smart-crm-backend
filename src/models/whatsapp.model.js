@@ -44,7 +44,7 @@ const findOrCreateWhatsAppThread = async ({ customerId, companyId, channel = 'wh
         const [threads] = await conn.query(
             `SELECT id, current_handler, assigned_agent_id, company_id FROM chat_threads 
              WHERE customer_id = ? AND company_id = ? AND channel = ? AND is_active = TRUE 
-             ORDER BY started_at DESC 
+             ORDER BY created_at DESC 
              LIMIT 1
              FOR UPDATE`,
             [customerId, companyId, channel]

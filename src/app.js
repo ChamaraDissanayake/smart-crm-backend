@@ -13,29 +13,9 @@ const { setupSocket } = require('./services/helpers/socket.helper.service');
 const app = express();
 const server = http.createServer(app);
 
-// Configure CORS options
-const corsOptions = {
-    origin: function (origin, callback) {
-        const allowedOrigins = [
-            'https://crm.smartglobalhub.com',
-            'https://crmb.smartglobalhub.com',
-            'http://localhost:3000',
-            'http://localhost:4000',
-        ];
-
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-};
 
 // Apply CORS middleware
-app.use(cors(corsOptions));
+app.use(cors());
 
 // Initialize Socket.IO with CORS configuration
 setupSocket(server, {

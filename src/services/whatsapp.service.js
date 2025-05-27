@@ -118,17 +118,8 @@ const handleIncomingMessage = async (data) => {
             companyId: thread.company_id
         });
 
-        // Use regex to extract BOT_NOTE
-        const noteMatch = botResponse.match(/\(BOT_NOTE:\s*(.*?)\)/);
-
-        const botNote = noteMatch ? noteMatch[1].trim() : null;
-        const botReply = botResponse.replace(/\(BOT_NOTE:\s*.*?\)/, '').trim();
-
-        //botNote use to generate leads
-        console.log('Chamara bot note', botNote);
-
         // Send only the clean message to customer
-        await sendMessage({ to: senderWaId, message: botReply, companyId: thread.company_id });
+        await sendMessage({ to: senderWaId, message: botResponse, companyId: thread.company_id });
     }
 };
 
