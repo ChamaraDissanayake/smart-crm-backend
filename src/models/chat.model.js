@@ -64,10 +64,20 @@ const getMessagesByThread = async ({ threadId, limit = 20, offset = 0 }) => {
     }
 };
 
-const getChatHistory = async ({ threadId, limit = 20, offset = 0 }) => {
-    limit = Number(limit) || 20;
-    offset = Number(offset) || 0;
+const checkThreadExists = async (threadId) => {
+    const conn = await pool.getConnection();
+    try {
+        const [rows] = await conn.query(
+            `SELECT 1 FROM chat_threads WHERE id = ? LIMIT 1`,
+            [threadId]
+        );
+        return rows.length > 0;
+    } finally {
+        conn.release();
+    }
+};
 
+const getChatHistory = async ({ threadId, limit, offset }) => {
     const conn = await pool.getConnection();
     try {
         const [rows] = await conn.query(
@@ -75,20 +85,17 @@ const getChatHistory = async ({ threadId, limit = 20, offset = 0 }) => {
              FROM chat_messages
              WHERE thread_id = ?
              ORDER BY created_at DESC 
-             LIMIT ${limit} OFFSET ${offset}`,
-            [threadId]
+             LIMIT ? OFFSET ?`,
+            [threadId, limit, offset]
         );
 
-        // Transform DB rows to match the Message interface
-        const messages = rows.map(row => ({
+        return rows.map(row => ({
             id: row.id,
             threadId: row.thread_id,
             role: row.role,
             content: row.content,
             createdAt: new Date(row.created_at).toISOString()
         }));
-
-        return messages;
     } finally {
         conn.release();
     }
@@ -193,5 +200,6 @@ module.exports = {
     getChatHistory,
     deleteOldMessages,
     getThreadsByCompanyId,
-    getChatThreadsWithCustomerInfo
+    getChatThreadsWithCustomerInfo,
+    checkThreadExists
 };

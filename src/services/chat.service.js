@@ -51,12 +51,30 @@ const getChatHeadsByCompanyId = async (companyId, channel) => {
     }
 };
 
-const getChatHistory = async (threadId, limit, offset) => {
+const getChatHistory = async (threadId, limit = 20, offset = 0) => {
     try {
-        return await chatModel.getChatHistory({ threadId, limit, offset });
+        if (!threadId) {
+            throw { statusCode: 400, message: 'Thread id is required' };
+        }
+
+        // First verify thread exists (assuming you have a threads table)
+        const threadExists = await chatModel.checkThreadExists(threadId);
+        console.log('Chamara threadExists', threadExists);
+        if (!threadExists) {
+            throw { statusCode: 404, message: 'Thread not found' };
+        }
+
+        // Then get messages (empty array is valid response)
+        const messages = await chatModel.getChatHistory({
+            threadId,
+            limit: Number(limit),
+            offset: Number(offset)
+        });
+
+        return messages;
     } catch (err) {
-        console.error(`Error in getChatHistory for threadId ${threadId}:`, err.message);
-        throw err; // Let the controller handle how to respond to the client
+        console.error(`Error in getChatHistory for threadId ${threadId}:`, err);
+        throw err;
     }
 };
 

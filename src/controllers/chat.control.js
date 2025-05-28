@@ -18,18 +18,15 @@ const getChatHeadsByCompanyId = async (req, res) => {
 
 const getChatHistoryByThreadId = async (req, res) => {
     try {
-        const threadId = req.query.threadId;
-        const offset = req.query.offset;
+        const { threadId, limit = 20, offset = 0 } = req.query;
 
-        if (!threadId) {
-            return res.status(400).json({ error: 'Thread id is required' });
-        }
-        const data = await chatService.getChatHistory(threadId, limit = 20, offset);
+        // Service will validate threadId
+        const messages = await chatService.getChatHistory(threadId, limit, offset);
 
-        res.json(data);
+        res.json(messages);
     } catch (err) {
-        console.log(err);
-        res.status(err.statusCode || 500).json({ error: err.message });
+        console.error('Error in getChatHistoryByThreadId:', err);
+        res.status(err.statusCode).json({ statusCode: err.statusCode || 500, error: err.message || 'Internal server error' });
     }
 };
 
