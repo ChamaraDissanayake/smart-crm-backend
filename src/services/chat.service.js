@@ -1,6 +1,7 @@
 const openai = require('../config/deepseek.config');
 const chatModel = require('../models/chat.model');
 const companyModel = require('../models/company.model');
+const { emitToThread } = require('./helpers/socket.helper.service');
 
 const MODEL_NAME = 'deepseek-chat';
 
@@ -59,7 +60,7 @@ const getChatHistory = async (threadId, limit = 20, offset = 0) => {
 
         // First verify thread exists (assuming you have a threads table)
         const threadExists = await chatModel.checkThreadExists(threadId);
-        console.log('Chamara threadExists', threadExists);
+
         if (!threadExists) {
             throw { statusCode: 404, message: 'Thread not found' };
         }
@@ -87,9 +88,20 @@ const findOrCreateThread = async ({ customerId, companyId, channel = 'web' }) =>
     }
 };
 
-const saveMessage = async ({ threadId, role, content }) => {
+const saveAndEmitMessage = async ({ threadId, role, content }) => {
     try {
-        return await chatModel.saveMessage({ thread_id: threadId, role, content });
+        const msgId = await chatModel.saveMessage({ thread_id: threadId, role, content });
+
+        // Emit over socket to frontend
+        emitToThread(threadId, {
+            id: msgId,
+            threadId,
+            content,
+            role,
+            createdAt: new Date().toISOString(),
+        });
+
+        return msgId
     } catch (err) {
         console.error(`Error in saveMessage for threadId ${threadId}:`, err.message);
         throw err; // Let the controller handle how to respond to the client
@@ -101,5 +113,5 @@ module.exports = {
     getChatHeadsByCompanyId,
     getChatHistory,
     findOrCreateThread,
-    saveMessage
+    saveAndEmitMessage
 };

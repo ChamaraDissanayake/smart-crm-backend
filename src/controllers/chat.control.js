@@ -39,7 +39,7 @@ const webChatHandler = async (req, res) => {
 
     try {
         // Save user message
-        await chatService.saveMessage({
+        await chatService.saveAndEmitMessage({
             threadId,
             role: 'user',
             content: message
@@ -48,7 +48,7 @@ const webChatHandler = async (req, res) => {
         // Generate bot response
         const { botResponse } = await chatService.generateBotResponse({ threadId, companyId });
 
-        chatService.saveMessage({
+        chatService.saveAndEmitMessage({
             threadId,
             role: 'assistant',
             content: botResponse
@@ -63,8 +63,27 @@ const webChatHandler = async (req, res) => {
     }
 };
 
+const webChatAgentMessageSend = async (req, res) => {
+    const { threadId, message } = req.body;
+    try {
+        // Save agent message
+        await chatService.saveAndEmitMessage({
+            threadId,
+            role: 'assistant',
+            content: message
+        });
+
+        res.json({
+            threadId,
+            message
+        });
+    } catch (err) {
+        res.status(err.statusCode || 500).json({ error: err.message });
+    }
+}
 module.exports = {
     webChatHandler,
     getChatHeadsByCompanyId,
-    getChatHistoryByThreadId
+    getChatHistoryByThreadId,
+    webChatAgentMessageSend
 };
