@@ -39,7 +39,7 @@ const emitToThread = (threadId, data) => {
         return;
     }
     io.of('/').to(`thread:${threadId}`).emit(eventName, data);
-    console.log(`📤 Emitted ${eventName} to thread ${threadId}`);
+    console.log(`📤 Emitted ${eventName} to thread ${threadId}. Message: ${data.content}`);
 };
 
 module.exports = {
