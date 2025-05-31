@@ -1,11 +1,10 @@
 //src/services/whatsapp.service.js
 const axios = require('axios');
 const {
-    findOrCreateWhatsAppThread,
     getWhatsAppIntegration
 } = require('../models/whatsapp.model');
 const { getOrCreateCustomerByPhone } = require('./customer.service');
-const { generateBotResponse, saveAndEmitMessage } = require('./chat.service');
+const { generateBotResponse, saveAndEmitMessage, findOrCreateThread } = require('./chat.service');
 
 const BASE_GRAPH_URI = process.env.BASE_GRAPH_URI || 'https://graph.facebook.com/v22.0';
 
@@ -21,9 +20,10 @@ const saveAndEmitWhatsAppMessage = async ({ phone, content, role, companyId, pho
 
     const customerId = await getOrCreateCustomerByPhone({ phone, companyId });
 
-    const thread = await findOrCreateWhatsAppThread({
+    const thread = await findOrCreateThread({
         customerId,
-        companyId
+        companyId,
+        channel: 'whatsapp'
     });
 
     const threadId = thread.id;

@@ -9,12 +9,12 @@ const createCustomerThread = async (req, res) => {
     try {
         await customerService.createCustomer(companyId, customerId, name, phone, email);
 
-        const threadId = await findOrCreateThread({
+        const thread = await findOrCreateThread({
             customerId,
             companyId,
             channel: 'web'
         });
-        res.json({ threadId });
+        res.json({ threadId: thread.id });
     } catch (err) {
         res.status(err.statusCode || 500).json({ error: err.message });
     }

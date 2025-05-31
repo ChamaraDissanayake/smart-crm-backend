@@ -6,23 +6,48 @@ const { v4: uuidv4 } = require('uuid');
 // ✅ Find or create a thread
 const findOrCreateThread = async ({ customerId, companyId, channel = 'web' }) => {
     const conn = await pool.getConnection();
+    let isNewThread = false;
+    let threadResult = null;
+    console.log('Thread channel', channel);
+
     try {
-        const [rows] = await conn.query(
-            `SELECT id FROM chat_threads 
-             WHERE customer_id = ? AND company_id = ? AND channel = ? AND is_active = TRUE
-             ORDER BY created_at DESC LIMIT 1`,
+        await conn.beginTransaction();
+
+        const [threads] = await conn.query(
+            `SELECT id, current_handler, assigned_agent_id, company_id FROM chat_threads 
+             WHERE customer_id = ? AND company_id = ? AND channel = ? AND is_active = TRUE 
+             ORDER BY created_at DESC 
+             LIMIT 1
+             FOR UPDATE`,
             [customerId, companyId, channel]
         );
 
-        if (rows.length > 0) return rows[0].id;
+        if (threads.length > 0) {
+            threadResult = threads[0];
+        } else {
+            const threadId = uuidv4();
+            await conn.query(
+                `INSERT INTO chat_threads (id, customer_id, company_id, assigned_agent_id, channel, is_active) 
+                 VALUES (?, ?, ?, NULL, ?, TRUE)`,
+                [threadId, customerId, companyId, channel]
+            );
 
-        const threadId = uuidv4();
-        await conn.query(
-            `INSERT INTO chat_threads (id, customer_id, company_id, channel, is_active) 
-             VALUES (?, ?, ?, ?, ?)`,
-            [threadId, customerId, companyId, channel, true]
-        );
-        return threadId;
+            isNewThread = true;
+            threadResult = {
+                id: threadId,
+                current_handler: 'bot',
+                assigned_agent_id: null,
+                company_id: companyId,
+            };
+        }
+
+        await conn.commit();
+
+        return { thread: threadResult, isNewThread };
+    } catch (err) {
+        await conn.rollback();
+        console.error('Error in findOrCreateThread:', err);
+        throw err;
     } finally {
         conn.release();
     }
@@ -164,7 +189,8 @@ const getChatThreadsWithCustomerInfo = async ({ companyId, channel }) => {
                     GROUP BY thread_id
                 ) cm2 ON cm1.thread_id = cm2.thread_id AND cm1.created_at = cm2.max_created_at
             ) m ON t.id = m.thread_id
-            WHERE t.company_id = ? AND t.is_active = TRUE${channelFilter}`,
+            WHERE t.company_id = ? AND t.is_active = TRUE${channelFilter}
+            ORDER BY m.created_at DESC`,
             params
         );
 

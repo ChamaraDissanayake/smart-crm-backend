@@ -1,9 +1,4 @@
 const { pool } = require('../config/db.config');
-const {
-    getMessagesByThread,
-    deleteOldMessages,
-} = require('./chat.model');
-const { v4: uuidv4 } = require('uuid');
 
 const getWhatsAppIntegration = async ({ companyId, phoneNumberId }) => {
     const conn = await pool.getConnection();
@@ -34,52 +29,7 @@ const getWhatsAppIntegration = async ({ companyId, phoneNumberId }) => {
     }
 };
 
-const findOrCreateWhatsAppThread = async ({ customerId, companyId, channel = 'whatsapp' }) => {
-    const conn = await pool.getConnection();
-    try {
-        await conn.beginTransaction();
-
-        // Lock matching threads for this customer/company/channel
-        const [threads] = await conn.query(
-            `SELECT id, current_handler, assigned_agent_id, company_id FROM chat_threads 
-             WHERE customer_id = ? AND company_id = ? AND channel = ? AND is_active = TRUE 
-             ORDER BY created_at DESC 
-             LIMIT 1
-             FOR UPDATE`,
-            [customerId, companyId, channel]
-        );
-
-        if (threads.length > 0) {
-            await conn.commit();
-            return threads[0];
-        }
-
-        // If no active thread found, create a new one
-        const threadId = uuidv4();
-        await conn.query(
-            `INSERT INTO chat_threads (id, customer_id, company_id, assigned_agent_id, channel, is_active) 
-             VALUES (?, ?, ?, NULL, ?, TRUE)`,
-            [threadId, customerId, companyId, channel]
-        );
-
-        await conn.commit();
-        return { id: threadId, current_handler: 'bot', assigned_agent_id: null, company_id: companyId };
-    } catch (err) {
-        await conn.rollback();
-        console.error('Error in findOrCreateThread:', err);
-        throw err;
-    } finally {
-        conn.release();
-    }
-};
-
-const getWhatsAppMessagesByThread = async ({ threadId, limit = 20, offset = 0 }) => {
-    return await getMessagesByThread({ threadId, limit, offset });
-};
 
 module.exports = {
-    findOrCreateWhatsAppThread,
-    getWhatsAppMessagesByThread,
-    deleteOldMessages,
     getWhatsAppIntegration
 };

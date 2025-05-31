@@ -22,6 +22,13 @@ const setupSocket = (server, socketConfig = {}) => {
             console.log(`📥 Socket ${socket.id} joined ${room}`);
         });
 
+        socket.on('join-company', (companyId) => {
+            const room = `company:${companyId}`;
+            socket.join(room);
+            console.log(`📥 Socket ${socket.id} joined ${room}`);
+        });
+
+
         socket.on('disconnect', () => {
             console.log('❌ Client disconnected:', socket.id);
         });
@@ -42,7 +49,20 @@ const emitToThread = (threadId, data) => {
     console.log(`📤 Emitted ${eventName} to thread ${threadId}. Message: ${data.content}`);
 };
 
+const emitToCompany = (companyId, data) => {
+
+    const eventName = 'new-thread';
+
+    if (!io) {
+        console.warn('Socket.IO not initialized');
+        return;
+    }
+    io.of('/').to(`company:${companyId}`).emit(eventName, data);
+    console.log(`📤 Emitted ${eventName} to company ${companyId}.`);
+};
+
 module.exports = {
     setupSocket,
-    emitToThread
+    emitToThread,
+    emitToCompany
 };
