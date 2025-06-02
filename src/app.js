@@ -34,19 +34,6 @@ app.get("/test", (req, res) => {
     res.send("Chamara CRM API working");
 });
 
-// const { generateBotResponse } = require('./services/chat.service');
-
-// (async () => {
-//     try {
-//         const { reply, threadId } = await generateBotResponse({ threadId: 'e832ca07-fdfa-49f4-9e56-1261e463492e', companyId: '1d4cedfe-800c-4c42-a76f-8db04466c5c6' });
-//         console.log('Chamara reply', reply);
-//         console.log('Chamara threadId', threadId);
-
-//     } catch (err) {
-//         console.error('Error fetching chat heads:', err);
-//     }
-// })();
-
 // Initialize database
 initDB().then(() => {
     // Middleware

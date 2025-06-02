@@ -93,7 +93,7 @@ const checkThreadExists = async (threadId) => {
     const conn = await pool.getConnection();
     try {
         const [rows] = await conn.query(
-            `SELECT 1 FROM chat_threads WHERE id = ? LIMIT 1`,
+            `SELECT 1 FROM chat_threads WHERE id = ? AND is_active = TRUE LIMIT 1;`,
             [threadId]
         );
         return rows.length > 0;
@@ -219,6 +219,14 @@ const getChatThreadsWithCustomerInfo = async ({ companyId, channel }) => {
     }
 };
 
+const markAsDone = async ({ threadId }) => {
+    const [result] = await pool.query(
+        'UPDATE chat_threads SET is_active = FALSE WHERE id = ?',
+        [threadId]
+    );
+    return result.affectedRows > 0;
+}
+
 module.exports = {
     findOrCreateThread,
     saveMessage,
@@ -227,5 +235,6 @@ module.exports = {
     deleteOldMessages,
     getThreadsByCompanyId,
     getChatThreadsWithCustomerInfo,
-    checkThreadExists
+    checkThreadExists,
+    markAsDone
 };

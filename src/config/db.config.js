@@ -112,6 +112,7 @@ const initDB = async () => {
         is_active BOOLEAN DEFAULT TRUE,
 
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         handover_to_agent_at TIMESTAMP,
         handover_to_bot_at TIMESTAMP,
         closed_at TIMESTAMP,

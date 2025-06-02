@@ -81,9 +81,29 @@ const webChatAgentMessageSend = async (req, res) => {
         res.status(err.statusCode || 500).json({ error: err.message });
     }
 }
+
+const markAsDone = async (req, res) => {
+    try {
+        const { threadId } = req.body;
+
+        const result = await chatService.markAsDone({
+            threadId
+        });
+
+        res.json({
+            result
+        });
+    } catch (error) {
+        console.log(error);
+        throw error
+    }
+
+}
+
 module.exports = {
     webChatHandler,
     getChatHeadsByCompanyId,
     getChatHistoryByThreadId,
-    webChatAgentMessageSend
+    webChatAgentMessageSend,
+    markAsDone
 };

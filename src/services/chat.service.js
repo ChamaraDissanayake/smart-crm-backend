@@ -27,7 +27,6 @@ const generateBotResponse = async ({ threadId, companyId }) => {
     });
 
     const assistantReply = response.choices[0].message.content;
-    console.log('Chamara assistantReply', assistantReply);
 
     // Extract all BOT_NOTE values
     const noteMatches = [...assistantReply.matchAll(/\(BOT_NOTE:\s*(.*?)\)/g)];
@@ -82,15 +81,12 @@ const getChatHistory = async (threadId, limit = 20, offset = 0) => {
 const findOrCreateThread = async ({ customerId, companyId, channel = 'web' }) => {
     try {
         const { thread, isNewThread } = await chatModel.findOrCreateThread({ customerId, companyId, channel });
-        console.log('Chamara isNewThread', isNewThread);
 
         if (isNewThread) {
             emitToCompany(thread.company_id, {
                 id: thread.id,
                 companyId: thread.company_id
             });
-            console.log('Chamara emit to company');
-
         }
         return thread;
     } catch (err) {
@@ -102,7 +98,6 @@ const findOrCreateThread = async ({ customerId, companyId, channel = 'web' }) =>
 const saveAndEmitMessage = async ({ threadId, role, content }) => {
     try {
         const msgId = await chatModel.saveMessage({ thread_id: threadId, role, content });
-        console.log('Chamara data', threadId, content, role, msgId);
 
         // Emit over socket to frontend
         emitToThread(threadId, {
@@ -120,10 +115,22 @@ const saveAndEmitMessage = async ({ threadId, role, content }) => {
     }
 };
 
+const markAsDone = async ({ threadId }) => {
+    try {
+        return await chatModel.markAsDone({ threadId });
+    } catch (err) {
+        console.error(`Error in saveMessage for threadId ${threadId}:`, err.message);
+        throw err;
+    }
+};
+
+
+
 module.exports = {
     generateBotResponse,
     getChatHeadsByCompanyId,
     getChatHistory,
     findOrCreateThread,
-    saveAndEmitMessage
+    saveAndEmitMessage,
+    markAsDone
 };
