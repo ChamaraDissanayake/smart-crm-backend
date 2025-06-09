@@ -93,6 +93,22 @@ const checkIsVerifiedUser = async (email) => {
     }
 };
 
+const getUsersByCompanyId = async (companyId) => {
+    try {
+        const [rows] = await pool.query(
+            `SELECT u.*
+            FROM users u
+            INNER JOIN company_members cm ON u.id = cm.user_id
+            WHERE cm.company_id = ?
+            AND u.is_deleted = FALSE
+            AND cm.is_deleted = FALSE`,
+            [companyId]
+        );
+        return rows;
+    } catch (error) {
+        return error
+    }
+};
 
 module.exports = {
     create,
@@ -102,5 +118,6 @@ module.exports = {
     updatePassword,
     updateVerificationStatus,
     checkEmailExists,
-    checkIsVerifiedUser
+    checkIsVerifiedUser,
+    getUsersByCompanyId
 };

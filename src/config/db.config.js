@@ -90,10 +90,15 @@ const initDB = async () => {
         company_id CHAR(36) NOT NULL,
 
         name TEXT,
+        code VARCHAR(5),
         phone TEXT,
         email TEXT,
+        location TEXT,
+        is_company BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
 
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
         FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
       );

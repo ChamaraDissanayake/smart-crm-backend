@@ -20,7 +20,7 @@ router.use('/chat', chatRoutes);
 router.use('/subscriptions', subscriptionRoutes);
 router.use('/integration', integrationRoutes);
 router.use('/whatsapp', whatsappnRoutes);
-router.use('/customer', customerRoutes);
+router.use('/customer', customerRoutes); //Note: In frontend we use customer as a contact.
 
 // 404 handler
 router.use((req, res) => {

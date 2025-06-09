@@ -1,5 +1,4 @@
 const userService = require('../services/user.service');
-const jwt = require('jsonwebtoken');
 
 const register = async (req, res) => {
     try {
@@ -110,6 +109,21 @@ const checkUserVerification = async (req, res) => {
     }
 };
 
+const getUsersByCompanyId = async (req, res) => {
+    try {
+        const { companyId } = req.query;
+        if (!companyId) {
+            return res.status(400).json({ error: 'CompanyId parameter is required' });
+        }
+
+        const users = await userService.getUsersByCompanyId(companyId);
+
+        res.status(200).json({ users });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 
 module.exports = {
     register,
@@ -120,5 +134,6 @@ module.exports = {
     deleteUserByEmail,
     resendVerificationEmail,
     checkDuplicateUser,
-    checkUserVerification
+    checkUserVerification,
+    getUsersByCompanyId
 };

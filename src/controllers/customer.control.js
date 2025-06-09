@@ -1,20 +1,65 @@
 // src/controllers/customer.controller.js
-
 const customerService = require('../services/customer.service');
 const { findOrCreateThread } = require('../services/chat.service');
 
 // This controller handles creating a customer thread for Chat Bot
 const createCustomerThread = async (req, res) => {
-    const { companyId, customerId, name, phone, email } = req.body;
+    const { companyId, name, phone, email, channel } = req.body;
+
+    if (!companyId) {
+        return res.status(400).json({ error: 'Missing required field: companyId' });
+    }
+
     try {
-        await customerService.createCustomer(companyId, customerId, name, phone, email);
+        let customer = await customerService.findCustomerByPhone({ phone, companyId });
+
+        if (!customer) {
+            customer = await customerService.createCustomer({ companyId, name, phone, email });
+        }
 
         const thread = await findOrCreateThread({
-            customerId,
+            customerId: customer.id,
             companyId,
-            channel: 'web'
+            channel: channel || 'web'
         });
-        res.json({ threadId: thread.id });
+
+        res.json({ threadId: thread.id, customerId: customer.id });
+
+    } catch (err) {
+        console.error('Error in createCustomerThread:', err);
+        res.status(err.statusCode || 500).json({ error: err.message });
+    }
+};
+
+const createCustomer = async (req, res) => {
+    try {
+        const { companyId, name, phone, email, location, isCompany, code } = req.body;
+
+        if (!companyId || !name) {
+            return res.status(400).json({ error: 'Missing required fields: companyId, name' });
+        }
+
+        let customer = await customerService.findCustomerByPhone(phone, companyId);
+
+        if (!customer) {
+            customer = await customerService.createCustomer({ companyId, name, phone, email, location, isCompany, code });
+        }
+        res.json({ customer });
+    } catch (err) {
+        res.status(err.statusCode || 500).json({ error: err.message });
+    }
+};
+
+const getCustomersByCompanyId = async (req, res) => {
+    const { companyId, limit, offset } = req.query;
+
+    if (!companyId) {
+        return res.status(400).json({ error: 'Missing required field: companyId' });
+    }
+
+    try {
+        const customers = await customerService.getCustomersByCompanyId(companyId, limit, offset);
+        res.json({ customers });
     } catch (err) {
         res.status(err.statusCode || 500).json({ error: err.message });
     }
@@ -22,4 +67,6 @@ const createCustomerThread = async (req, res) => {
 
 module.exports = {
     createCustomerThread,
+    createCustomer,
+    getCustomersByCompanyId
 };

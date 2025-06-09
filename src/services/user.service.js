@@ -97,6 +97,10 @@ const checkVerification = async (email) => {
     return await userModel.checkIsVerifiedUser(email);
 }
 
+const getUsersByCompanyId = async (companyId) => {
+    return await userModel.getUsersByCompanyId(companyId);
+}
+
 module.exports = {
     register,
     verifyEmail,
@@ -106,5 +110,6 @@ module.exports = {
     deleteUserByEmail,
     resendVerificationEmail,
     duplicateUserCheck,
-    checkVerification
+    checkVerification,
+    getUsersByCompanyId
 };

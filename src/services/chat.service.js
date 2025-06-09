@@ -36,7 +36,6 @@ const generateBotResponse = async ({ threadId, companyId }) => {
     const botReply = assistantReply.replace(/\(BOT_NOTE:\s*.*?\)/g, '').trim();
     //botNote use to generate leads
     console.log('Chamara bot note', botNotes);
-
     return { botResponse: botReply };
 };
 
@@ -44,7 +43,8 @@ const generateBotResponse = async ({ threadId, companyId }) => {
 // collect all customer ids and get their details -> id, name, phone, email
 const getChatHeadsByCompanyId = async (companyId, channel) => {
     try {
-        return await chatModel.getChatThreadsWithCustomerInfo({ companyId, channel });
+        const data = await chatModel.getChatThreadsWithCustomerInfo({ companyId, channel });
+        return data;
     } catch (err) {
         console.error(`Error in getChatHeadsByCompanyId for companyId ${companyId}:`, err.message);
         throw err; // Let the controller handle how to respond to the client
@@ -83,6 +83,7 @@ const findOrCreateThread = async ({ customerId, companyId, channel = 'web' }) =>
         const { thread, isNewThread } = await chatModel.findOrCreateThread({ customerId, companyId, channel });
 
         if (isNewThread) {
+            // Emit to CRM frontend chats that a new thread was created
             emitToCompany(thread.company_id, {
                 id: thread.id,
                 companyId: thread.company_id
@@ -124,7 +125,24 @@ const markAsDone = async ({ threadId }) => {
     }
 };
 
+const assignChat = async ({ threadId, chatHandler, assignedAgentId }) => {
+    try {
+        console.log("chamara", threadId, chatHandler, assignedAgentId);
 
+        return await chatModel.assignChat({ threadId, chatHandler, assignedAgentId });
+    } catch (err) {
+        console.error(`Error in assign for threadId ${data.threadId}:`, err.message);
+        throw err;
+    }
+};
+
+const getThreadById = async ({ threadId }) => {
+    try {
+        return await chatModel.getThreadById({ threadId });
+    } catch (error) {
+        console.log(error);
+    }
+}
 
 module.exports = {
     generateBotResponse,
@@ -132,5 +150,7 @@ module.exports = {
     getChatHistory,
     findOrCreateThread,
     saveAndEmitMessage,
-    markAsDone
+    markAsDone,
+    assignChat,
+    getThreadById
 };

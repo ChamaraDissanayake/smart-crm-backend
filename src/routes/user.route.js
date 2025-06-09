@@ -8,7 +8,8 @@ const {
     deleteUserByEmail,
     resendVerificationEmail,
     checkDuplicateUser,
-    checkUserVerification
+    checkUserVerification,
+    getUsersByCompanyId
 } = require('../controllers/user.control');
 
 const router = Router();
@@ -22,5 +23,6 @@ router.delete('/delete', deleteUserByEmail);
 router.post('/resend-verification-email', resendVerificationEmail);
 router.get('/check-duplicate-user', checkDuplicateUser);
 router.get('/check-user-verification', checkUserVerification);
+router.get('/get-users', getUsersByCompanyId);
 
 module.exports = router;

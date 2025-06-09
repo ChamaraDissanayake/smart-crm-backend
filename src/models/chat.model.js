@@ -156,6 +156,22 @@ const getThreadsByCompanyId = async ({ companyId }) => {
     }
 };
 
+const getThreadById = async ({ threadId }) => {
+
+    const conn = await pool.getConnection();
+    try {
+        const [rows] = await conn.query(
+            `SELECT *
+             FROM chat_threads
+             WHERE id = ?`,
+            [threadId]
+        );
+        return rows[0] || null;
+    } finally {
+        conn.release();
+    }
+};
+
 const getChatThreadsWithCustomerInfo = async ({ companyId, channel }) => {
     const conn = await pool.getConnection();
     try {
@@ -172,6 +188,8 @@ const getChatThreadsWithCustomerInfo = async ({ companyId, channel }) => {
                 t.id AS thread_id,
                 t.customer_id,
                 t.channel,
+                t.assigned_agent_id,
+                t.current_handler,
                 c.name AS customer_name,
                 c.phone AS customer_phone,
                 c.email AS customer_email,
@@ -197,6 +215,8 @@ const getChatThreadsWithCustomerInfo = async ({ companyId, channel }) => {
         return rows.map(row => ({
             id: row.thread_id,
             channel: row.channel,
+            assignee: row.assigned_agent_id,
+            currentHandler: row.current_handler,
             customer: {
                 id: row.customer_id,
                 name: row.customer_name,
@@ -221,11 +241,28 @@ const getChatThreadsWithCustomerInfo = async ({ companyId, channel }) => {
 
 const markAsDone = async ({ threadId }) => {
     const [result] = await pool.query(
-        'UPDATE chat_threads SET is_active = FALSE WHERE id = ?',
+        'UPDATE chat_threads SET is_active = FALSE, closed_at = CURRENT_TIMESTAMP WHERE id = ?',
         [threadId]
     );
     return result.affectedRows > 0;
 }
+
+const assignChat = async ({ threadId, chatHandler, assignedAgentId }) => {
+    let setClause = `current_handler = ?, assigned_agent_id = ?`;
+    const values = [chatHandler, assignedAgentId || null];
+
+    if (chatHandler === 'agent') {
+        setClause += `, handover_to_agent_at = CURRENT_TIMESTAMP`;
+    } else if (chatHandler === 'bot') {
+        setClause += `, handover_to_bot_at = CURRENT_TIMESTAMP`;
+    }
+
+    const query = `UPDATE chat_threads SET ${setClause} WHERE id = ?`;
+    values.push(threadId);
+
+    const [result] = await pool.query(query, values);
+    return result.affectedRows > 0;
+};
 
 module.exports = {
     findOrCreateThread,
@@ -236,5 +273,7 @@ module.exports = {
     getThreadsByCompanyId,
     getChatThreadsWithCustomerInfo,
     checkThreadExists,
-    markAsDone
+    markAsDone,
+    assignChat,
+    getThreadById
 };

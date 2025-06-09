@@ -45,19 +45,29 @@ const webChatHandler = async (req, res) => {
             content: message
         });
 
-        // Generate bot response
-        const { botResponse } = await chatService.generateBotResponse({ threadId, companyId });
+        const thread = await chatService.getThreadById({ threadId });
 
-        chatService.saveAndEmitMessage({
-            threadId,
-            role: 'assistant',
-            content: botResponse
-        });
+        if (thread.current_handler === 'bot') {
+            // Generate bot response
+            const { botResponse } = await chatService.generateBotResponse({ threadId, companyId });
 
-        res.json({
-            threadId,
-            botResponse: botResponse
-        });
+            chatService.saveAndEmitMessage({
+                threadId,
+                role: 'assistant',
+                content: botResponse
+            });
+
+            res.json({
+                threadId,
+                botResponse: botResponse
+            });
+        } else {
+            res.json({
+                threadId,
+                botResponse: 'AGENT'
+            });
+        }
+
     } catch (err) {
         res.status(err.statusCode || 500).json({ error: err.message });
     }
@@ -100,10 +110,37 @@ const markAsDone = async (req, res) => {
 
 }
 
+const assignChat = async (req, res) => {
+    try {
+        const { threadId, chatHandler, assignedAgentId } = req.body;
+
+        const result = await chatService.assignChat({
+            threadId, chatHandler, assignedAgentId
+        });
+
+        if (chatHandler !== 'bot') {
+            // Notify the agent about the new assignment
+            await chatService.saveAndEmitMessage({
+                threadId,
+                role: 'assistant',
+                content: `One of our agents will contact you soon!`
+            });
+        }
+
+        res.json({
+            result
+        });
+    } catch (error) {
+        console.log(error);
+        throw error
+    }
+}
+
 module.exports = {
     webChatHandler,
     getChatHeadsByCompanyId,
     getChatHistoryByThreadId,
     webChatAgentMessageSend,
-    markAsDone
+    markAsDone,
+    assignChat
 };

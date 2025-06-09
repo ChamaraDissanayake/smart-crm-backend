@@ -1,9 +1,10 @@
 //src/services/customer.service.js
 
 const { v4: uuidv4 } = require('uuid');
-const { findCustomerByPhone, insertCustomer } = require('../models/customer.model');
+const customerModel = require('../models/customer.model');
 
-const getOrCreateCustomerByPhone = async ({ phone, companyId }) => {
+// Using this for WhatsApp customer creation
+const getOrCreateCustomerByPhone = async ({ phone, companyId, name = null, email = null }) => {
     const existing = await findCustomerByPhone({ phone, companyId });
     if (existing) return existing.id;
 
@@ -11,27 +12,49 @@ const getOrCreateCustomerByPhone = async ({ phone, companyId }) => {
     const customer = {
         companyId,
         id: customerId,
-        name: null,
-        phone,
-        email: null
-    };
-    await insertCustomer(customer);
-    return customerId;
-};
-
-const createCustomer = async (companyId, customerId, name, phone, email) => {
-    const customer = {
-        companyId,
-        id: customerId,
         name,
         phone,
         email
     };
+    await customerModel.insertCustomer(customer);
+    return customerId;
+};
 
-    return insertCustomer(customer);
+const findCustomerByPhone = async ({ phone, companyId }) => {
+    if (!phone || !companyId) {
+        throw new Error('Missing required fields: phone, companyId');
+    }
+    return await customerModel.findCustomerByPhone({ phone, companyId }) || null;
+};
+
+const createCustomer = async ({ companyId, name, phone, email, location, isCompany = false, code }) => {
+    const customer = {
+        id: uuidv4(),
+        companyId,
+        name,
+        phone,
+        email,
+        location,
+        isCompany,
+        code
+    };
+
+    await customerModel.insertCustomer(customer);
+    return customer;
+};
+
+const getCustomersByCompanyId = async (companyId, limit = 10, offset = 0) => {
+    try {
+        return await customerModel.getCustomersByCompanyId({ companyId, limit, offset });
+    } catch (error) {
+        console.log(error);
+        throw new Error('Failed to fetch customers', error);
+    }
 };
 
 module.exports = {
     getOrCreateCustomerByPhone,
-    createCustomer
+    createCustomer,
+    getCustomersByCompanyId,
+    findCustomerByPhone
 };

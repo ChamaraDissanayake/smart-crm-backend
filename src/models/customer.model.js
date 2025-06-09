@@ -17,8 +17,8 @@ const insertCustomer = async (customer) => {
     const conn = await pool.getConnection();
     try {
         const query = `
-            INSERT INTO customers (id, name, phone, email, company_id)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO customers (id, name, phone, email, company_id, location, is_company, code)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const values = [
@@ -27,6 +27,9 @@ const insertCustomer = async (customer) => {
             customer.phone,
             customer.email,
             customer.companyId,
+            customer.location,
+            customer.isCompany,
+            customer.code
         ];
 
         await conn.query(query, values);
@@ -72,10 +75,37 @@ const getCustomersByIds = async ({ customerIds }) => {
     }
 };
 
+const getCustomersByCompanyId = async ({ companyId, limit = 100, offset = 0 }) => {
+    const conn = await pool.getConnection();
+    try {
+        const [rows] = await conn.query(
+            `SELECT id, name, code, phone, email, location, is_company, updated_at 
+             FROM customers 
+             WHERE company_id = ? 
+             LIMIT ? OFFSET ?`,
+            [companyId, limit, offset]
+        );
+
+        const transformedRows = rows.map(row => {
+            const { is_company, updated_at, ...rest } = row;
+            return {
+                ...rest,
+                isCompany: is_company,
+                updatedAt: updated_at,
+            };
+        });
+
+        return transformedRows;
+    } finally {
+        conn.release();
+    }
+};
+
 
 module.exports = {
     findCustomerByPhone,
     insertCustomer,
     getCustomerById,
-    getCustomersByIds
+    getCustomersByIds,
+    getCustomersByCompanyId
 };
