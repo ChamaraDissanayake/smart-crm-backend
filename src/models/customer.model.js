@@ -179,6 +179,7 @@ const getCustomersByCompanyId = async ({ companyId, limit = 1000, offset = 0 }) 
             `SELECT id, name, code, phone, email, location, is_company, updated_at 
              FROM customers 
              WHERE company_id = ? AND is_active = TRUE
+             ORDER BY created_at DESC
              LIMIT ? OFFSET ?`,
             [companyId, limit, offset]
         );

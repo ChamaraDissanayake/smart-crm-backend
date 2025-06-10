@@ -22,7 +22,7 @@ const getOrCreateCustomerByPhone = async ({ phone, companyId, name = null, email
 
 const findCustomerByPhone = async ({ phone, companyId }) => {
     if (!phone || !companyId) {
-        throw new Error('Missing required fields: phone, companyId');
+        return null;
     }
     const data = await customerModel.findCustomerByPhone({ phone, companyId }) || null;
     return data;

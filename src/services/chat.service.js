@@ -6,19 +6,24 @@ const { emitToThread, emitToCompany } = require('./helpers/socket.helper.service
 const MODEL_NAME = 'deepseek-chat';
 
 const generateBotResponse = async ({ threadId, companyId }) => {
+    // 1. Get chat history (reversed to have latest first)
+    const pastMessages = await getChatHistory(threadId, 1000, 0);
+    const chatHistory = pastMessages.reverse().map(msg => ({
+        role: msg.role,
+        content: msg.content
+    }));
 
-    // 3. Chat history
-    const pastMessages = await getChatHistory(threadId, limit = 1000, offset = 0);
-    const chatHistory = pastMessages.reverse().map(msg => ({ role: msg.role, content: msg.content }));
-
-    // 4. Company instruction
+    // 2. Get company instructions
     const company = await companyModel.findById(companyId);
     const instruction = company?.chatbot_instruction || "You are a helpful assistant.";
 
-    // 5. Final message array
-    const messages = [{ role: 'system', content: instruction }, ...chatHistory];
+    // 3. Prepare messages for LLM
+    const messages = [
+        { role: 'system', content: instruction },
+        ...chatHistory
+    ];
 
-    // 6. LLM response
+    // 4. Get LLM response
     const response = await openai.chat.completions.create({
         model: MODEL_NAME,
         messages,
@@ -28,15 +33,27 @@ const generateBotResponse = async ({ threadId, companyId }) => {
 
     const assistantReply = response.choices[0].message.content;
 
-    // Extract all BOT_NOTE values
-    const noteMatches = [...assistantReply.matchAll(/\(BOT_NOTE:\s*(.*?)\)/g)];
-    const botNotes = noteMatches.map(match => match[1].trim());
+    // 5. Extract ALL content within parentheses (more generic)
+    const parentheticalMatches = [...assistantReply.matchAll(/\(([^)]+)\)/g)];
+    const extractedNotes = parentheticalMatches.map(match => match[1].trim());
 
-    // Remove all BOT_NOTE mentions from the final reply
-    const botReply = assistantReply.replace(/\(BOT_NOTE:\s*.*?\)/g, '').trim();
-    //botNote use to generate leads
-    console.log('Chamara bot note', botNotes);
-    return { botResponse: botReply };
+    // 6. Remove ALL parenthetical content from final reply
+    const botReply = assistantReply.replace(/\([^)]+\)/g, '').trim();
+
+    // 7. Separate BOT_NOTE from other parentheticals
+    const botNotes = extractedNotes.filter(note => note.startsWith('BOT_NOTE:'));
+    const otherParentheticals = extractedNotes.filter(note => !note.startsWith('BOT_NOTE:'));
+
+    console.log('Chamara extracted BOT_NOTEs:', botNotes);
+    console.log('Chamara other parenthetical content:', otherParentheticals);
+
+    return {
+        botResponse: botReply,
+        metadata: {
+            botNotes,
+            otherParentheticals
+        }
+    };
 };
 
 // send company id and get chat threads -> id, customer_id, channel
