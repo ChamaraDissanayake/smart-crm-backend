@@ -98,6 +98,46 @@ const updateCustomer = async (customer) => {
     }
 };
 
+const deleteCustomer = async (id) => {
+    let connection;
+    try {
+        // Get a connection from the pool
+        connection = await pool.getConnection();
+
+        // Begin transaction
+        await connection.beginTransaction();
+
+        // Soft delete customer
+        const [customerResult] = await connection.query(
+            'UPDATE customers SET is_active = FALSE WHERE id = ?',
+            [id]
+        );
+
+        if (customerResult.affectedRows === 0) {
+            await connection.rollback();
+            return false; // Customer not found
+        }
+
+        // Soft delete all threads belonging to this customer
+        const [threadsResult] = await connection.query(
+            'UPDATE chat_threads SET is_active = FALSE WHERE customer_id = ?',
+            [id]
+        );
+
+        // Commit the transaction
+        await connection.commit();
+
+        return true;
+    } catch (error) {
+        // Rollback in case of error
+        if (connection) await connection.rollback();
+        console.error('Error deleting customer:', error);
+        return false;
+    } finally {
+        // Release the connection back to the pool
+        if (connection) connection.release();
+    }
+};
 
 const getCustomerById = async ({ customerId }) => {
     const conn = await pool.getConnection();
@@ -138,7 +178,7 @@ const getCustomersByCompanyId = async ({ companyId, limit = 100, offset = 0 }) =
         const [rows] = await conn.query(
             `SELECT id, name, code, phone, email, location, is_company, updated_at 
              FROM customers 
-             WHERE company_id = ? 
+             WHERE company_id = ? AND is_active = TRUE
              LIMIT ? OFFSET ?`,
             [companyId, limit, offset]
         );
@@ -167,6 +207,7 @@ module.exports = {
     findCustomerByPhone,
     insertCustomer,
     updateCustomer,
+    deleteCustomer,
     getCustomerById,
     getCustomersByIds,
     getCustomersByCompanyId

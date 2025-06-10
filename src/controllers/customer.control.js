@@ -76,6 +76,15 @@ const updateCustomer = async (req, res) => {
     }
 };
 
+const deleteCustomer = async (req, res) => {
+    try {
+        await customerService.deleteCustomer(req.params.id);
+        res.json({ message: 'Customer deleted successfully' });
+    } catch (err) {
+        res.status(err.statusCode || 500).json({ error: err.message });
+    }
+};
+
 const getCustomersByCompanyId = async (req, res) => {
     const { companyId, limit, offset } = req.query;
 
@@ -96,5 +105,6 @@ module.exports = {
     createCustomerThread,
     createCustomer,
     updateCustomer,
+    deleteCustomer,
     getCustomersByCompanyId
 };

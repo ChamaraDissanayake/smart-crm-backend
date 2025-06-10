@@ -126,7 +126,7 @@ const getChatHistory = async ({ threadId, limit, offset }) => {
     }
 };
 
-// ✅ Delete old messages
+// ✅ Delete old messages to reduce load
 const deleteOldMessages = async () => {
     const conn = await pool.getConnection();
     try {

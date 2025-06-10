@@ -42,6 +42,10 @@ const updateCustomer = async (customer) => {
     return await customerModel.updateCustomer(customer);
 };
 
+const deleteCustomer = async (id) => {
+    return await customerModel.deleteCustomer(id);
+};
+
 const getCustomersByCompanyId = async (companyId, limit = 10, offset = 0) => {
     try {
         return await customerModel.getCustomersByCompanyId({ companyId, limit, offset });
@@ -55,6 +59,7 @@ module.exports = {
     getOrCreateCustomerByPhone,
     createCustomer,
     updateCustomer,
+    deleteCustomer,
     getCustomersByCompanyId,
     findCustomerByPhone
 };
