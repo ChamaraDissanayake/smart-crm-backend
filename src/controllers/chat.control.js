@@ -18,7 +18,7 @@ const getChatHeadsByCompanyId = async (req, res) => {
 
 const getChatHistoryByThreadId = async (req, res) => {
     try {
-        const { threadId, limit = 20, offset = 0 } = req.query;
+        const { threadId, limit = 1000, offset = 0 } = req.query;
 
         // Service will validate threadId
         const messages = await chatService.getChatHistory(threadId, limit, offset);

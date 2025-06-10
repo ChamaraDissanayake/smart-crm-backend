@@ -72,7 +72,7 @@ const saveMessage = async ({ thread_id, role, content }) => {
 };
 
 // ✅ Get messages by thread
-const getMessagesByThread = async ({ threadId, limit = 20, offset = 0 }) => {
+const getMessagesByThread = async ({ threadId, limit = 1000, offset = 0 }) => {
     const conn = await pool.getConnection();
     try {
         const [rows] = await conn.query(

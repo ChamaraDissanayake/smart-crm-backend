@@ -8,7 +8,7 @@ const MODEL_NAME = 'deepseek-chat';
 const generateBotResponse = async ({ threadId, companyId }) => {
 
     // 3. Chat history
-    const pastMessages = await getChatHistory(threadId, limit = 10, offset = 0);
+    const pastMessages = await getChatHistory(threadId, limit = 1000, offset = 0);
     const chatHistory = pastMessages.reverse().map(msg => ({ role: msg.role, content: msg.content }));
 
     // 4. Company instruction
@@ -51,7 +51,7 @@ const getChatHeadsByCompanyId = async (companyId, channel) => {
     }
 };
 
-const getChatHistory = async (threadId, limit = 20, offset = 0) => {
+const getChatHistory = async (threadId, limit = 1000, offset = 0) => {
     try {
         if (!threadId) {
             throw { statusCode: 400, message: 'Thread id is required' };

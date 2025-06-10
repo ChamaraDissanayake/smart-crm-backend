@@ -46,7 +46,7 @@ const deleteCustomer = async (id) => {
     return await customerModel.deleteCustomer(id);
 };
 
-const getCustomersByCompanyId = async (companyId, limit = 10, offset = 0) => {
+const getCustomersByCompanyId = async (companyId, limit = 1000, offset = 0) => {
     try {
         return await customerModel.getCustomersByCompanyId({ companyId, limit, offset });
     } catch (error) {

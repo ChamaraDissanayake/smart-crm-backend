@@ -172,7 +172,7 @@ const getCustomersByIds = async ({ customerIds }) => {
     }
 };
 
-const getCustomersByCompanyId = async ({ companyId, limit = 100, offset = 0 }) => {
+const getCustomersByCompanyId = async ({ companyId, limit = 1000, offset = 0 }) => {
     const conn = await pool.getConnection();
     try {
         const [rows] = await conn.query(
