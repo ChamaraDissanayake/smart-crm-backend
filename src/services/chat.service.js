@@ -127,8 +127,6 @@ const markAsDone = async ({ threadId }) => {
 
 const assignChat = async ({ threadId, chatHandler, assignedAgentId }) => {
     try {
-        console.log("chamara", threadId, chatHandler, assignedAgentId);
-
         return await chatModel.assignChat({ threadId, chatHandler, assignedAgentId });
     } catch (err) {
         console.error(`Error in assign for threadId ${data.threadId}:`, err.message);

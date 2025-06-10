@@ -4,10 +4,26 @@ const findCustomerByPhone = async ({ phone, companyId }) => {
     const conn = await pool.getConnection();
     try {
         const [rows] = await conn.query(
-            `SELECT id FROM customers WHERE phone = ? AND company_id = ?`,
-            [phone, companyId]
+            `SELECT id, name, phone, email, location, is_company, code 
+             FROM customers 
+             WHERE phone = ? AND company_id = ?`,
+            [normalizePhone(phone), companyId]
         );
-        return rows[0] || null;
+
+        if (!rows.length) return null;
+
+        const row = rows[0];
+
+        // Map snake_case fields to camelCase
+        return {
+            id: row.id,
+            name: row.name,
+            phone: row.phone,
+            email: row.email,
+            location: row.location,
+            isCompany: row.is_company,
+            code: row.code
+        };
     } finally {
         conn.release();
     }
@@ -24,7 +40,7 @@ const insertCustomer = async (customer) => {
         const values = [
             customer.id,
             customer.name,
-            customer.phone,
+            normalizePhone(customer.phone),
             customer.email,
             customer.companyId,
             customer.location,
@@ -33,7 +49,11 @@ const insertCustomer = async (customer) => {
         ];
 
         await conn.query(query, values);
-        return { id: customer.id };
+
+        return {
+            ...customer,
+            phone: normalizePhone(customer.phone)
+        };
     } catch (err) {
         console.error('Error inserting customer:', err);
         throw new Error('Failed to insert customer');
@@ -41,6 +61,43 @@ const insertCustomer = async (customer) => {
         conn.release();
     }
 };
+
+
+const updateCustomer = async (customer) => {
+    const conn = await pool.getConnection();
+    try {
+        console.log('Chamara update customer', customer);
+
+        const query = `
+            UPDATE customers
+            SET name = ?, email = ?, location = ?, is_company = ?, code = ?, phone = ?
+            WHERE id = ?
+        `;
+
+        const values = [
+            customer.name,
+            customer.email,
+            customer.location,
+            customer.isCompany,
+            customer.code,
+            normalizePhone(customer.phone),
+            customer.id
+        ];
+
+        await conn.query(query, values);
+
+        return {
+            ...customer,
+            phone: normalizePhone(customer.phone)
+        };
+    } catch (err) {
+        console.error('Error updating customer:', err);
+        throw new Error('Failed to update customer');
+    } finally {
+        conn.release();
+    }
+};
+
 
 const getCustomerById = async ({ customerId }) => {
     const conn = await pool.getConnection();
@@ -94,17 +151,22 @@ const getCustomersByCompanyId = async ({ companyId, limit = 100, offset = 0 }) =
                 updatedAt: updated_at,
             };
         });
-
         return transformedRows;
     } finally {
         conn.release();
     }
 };
 
+const normalizePhone = (phone) => {
+    if (!phone) return phone;
+    return phone.startsWith('+') ? phone.slice(1) : phone;
+};
+
 
 module.exports = {
     findCustomerByPhone,
     insertCustomer,
+    updateCustomer,
     getCustomerById,
     getCustomersByIds,
     getCustomersByCompanyId

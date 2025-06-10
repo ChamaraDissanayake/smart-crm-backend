@@ -24,23 +24,22 @@ const findCustomerByPhone = async ({ phone, companyId }) => {
     if (!phone || !companyId) {
         throw new Error('Missing required fields: phone, companyId');
     }
-    return await customerModel.findCustomerByPhone({ phone, companyId }) || null;
+    const data = await customerModel.findCustomerByPhone({ phone, companyId }) || null;
+    return data;
 };
 
-const createCustomer = async ({ companyId, name, phone, email, location, isCompany = false, code }) => {
+const createCustomer = async (params) => {
     const customer = {
         id: uuidv4(),
-        companyId,
-        name,
-        phone,
-        email,
-        location,
-        isCompany,
-        code
+        ...params
     };
 
     await customerModel.insertCustomer(customer);
     return customer;
+};
+
+const updateCustomer = async (customer) => {
+    return await customerModel.updateCustomer(customer);
 };
 
 const getCustomersByCompanyId = async (companyId, limit = 10, offset = 0) => {
@@ -55,6 +54,7 @@ const getCustomersByCompanyId = async (companyId, limit = 10, offset = 0) => {
 module.exports = {
     getOrCreateCustomerByPhone,
     createCustomer,
+    updateCustomer,
     getCustomersByCompanyId,
     findCustomerByPhone
 };
