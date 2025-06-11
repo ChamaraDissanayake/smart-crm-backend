@@ -4,6 +4,7 @@ const {
     createCustomer,
     updateCustomer,
     getCustomersByCompanyId,
+    getCustomerCountByCompanyId,
     deleteCustomer
 } = require('../controllers/customer.control');
 
@@ -14,5 +15,6 @@ router.post('/create-customer', createCustomer);
 router.post('/update-customer', updateCustomer);
 router.delete('/delete-customer/:id', deleteCustomer);
 router.get('/get-customers', getCustomersByCompanyId);
+router.get('/get-count', getCustomerCountByCompanyId);
 
 module.exports = router;

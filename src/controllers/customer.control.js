@@ -101,10 +101,26 @@ const getCustomersByCompanyId = async (req, res) => {
     }
 };
 
+const getCustomerCountByCompanyId = async (req, res) => {
+    const { companyId } = req.query;
+
+    if (!companyId) {
+        return res.status(400).json({ error: 'Missing required field: companyId' });
+    }
+
+    try {
+        const customerCount = await customerService.getCustomerCountByCompanyId(companyId);
+        res.json({ customerCount });
+    } catch (err) {
+        res.status(err.statusCode || 500).json({ error: err.message });
+    }
+};
+
 module.exports = {
     createCustomerThread,
     createCustomer,
     updateCustomer,
     deleteCustomer,
-    getCustomersByCompanyId
+    getCustomersByCompanyId,
+    getCustomerCountByCompanyId
 };

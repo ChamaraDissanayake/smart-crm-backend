@@ -55,11 +55,21 @@ const getCustomersByCompanyId = async (companyId, limit = 1000, offset = 0) => {
     }
 };
 
+const getCustomerCountByCompanyId = async (companyId) => {
+    try {
+        return await customerModel.getCustomerCountByCompanyId(companyId);
+    } catch (error) {
+        console.log(error);
+        throw new Error('Failed to fetch customer count', error);
+    }
+};
+
 module.exports = {
     getOrCreateCustomerByPhone,
     createCustomer,
     updateCustomer,
     deleteCustomer,
     getCustomersByCompanyId,
-    findCustomerByPhone
+    findCustomerByPhone,
+    getCustomerCountByCompanyId
 };

@@ -199,6 +199,22 @@ const getCustomersByCompanyId = async ({ companyId, limit = 1000, offset = 0 }) 
     }
 };
 
+const getCustomerCountByCompanyId = async (companyId) => {
+    const conn = await pool.getConnection();
+    try {
+        const [rows] = await conn.query(
+            `SELECT COUNT(*) as count 
+             FROM customers 
+             WHERE company_id = ? AND is_active = TRUE`,
+            [companyId]
+        );
+
+        return rows[0]?.count || 0;
+    } finally {
+        conn.release();
+    }
+};
+
 const normalizePhone = (phone) => {
     if (!phone) return phone;
     return phone.startsWith('+') ? phone.slice(1) : phone;
@@ -212,5 +228,6 @@ module.exports = {
     deleteCustomer,
     // getCustomerById,
     // getCustomersByIds,
-    getCustomersByCompanyId
+    getCustomersByCompanyId,
+    getCustomerCountByCompanyId
 };
