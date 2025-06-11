@@ -6,7 +6,7 @@ const findCustomerByPhone = async ({ phone, companyId }) => {
         const [rows] = await conn.query(
             `SELECT id, name, phone, email, location, is_company, code 
              FROM customers 
-             WHERE phone = ? AND company_id = ?`,
+             WHERE phone = ? AND company_id = ? AND is_active = TRUE`,
             [normalizePhone(phone), companyId]
         );
 
@@ -139,38 +139,39 @@ const deleteCustomer = async (id) => {
     }
 };
 
-const getCustomerById = async ({ customerId }) => {
-    const conn = await pool.getConnection();
-    try {
-        const [rows] = await conn.query(
-            `SELECT name, phone, email
-             FROM customer
-             WHERE id = ?`,
-            [customerId]
-        );
-        return rows;
-    } finally {
-        conn.release();
-    }
-}
+// These functions are commented out as they are not currently used in the application.
+// const getCustomerById = async ({ customerId }) => {
+//     const conn = await pool.getConnection();
+//     try {
+//         const [rows] = await conn.query(
+//             `SELECT name, phone, email
+//              FROM customer
+//              WHERE id = ? AND is_active = TRUE`,
+//             [customerId]
+//         );
+//         return rows;
+//     } finally {
+//         conn.release();
+//     }
+// }
 
-const getCustomersByIds = async ({ customerIds }) => {
-    if (!Array.isArray(customerIds) || customerIds.length === 0) {
-        return []; // or throw an error if you want to enforce input
-    }
+// const getCustomersByIds = async ({ customerIds }) => {
+//     if (!Array.isArray(customerIds) || customerIds.length === 0) {
+//         return []; // or throw an error if you want to enforce input
+//     }
 
-    const conn = await pool.getConnection();
-    try {
-        const placeholders = customerIds.map(() => '?').join(', ');
-        const [rows] = await conn.query(
-            `SELECT id, name, phone, email FROM customer WHERE id IN (${placeholders})`,
-            customerIds
-        );
-        return rows; // rows will already be an array of objects
-    } finally {
-        conn.release();
-    }
-};
+//     const conn = await pool.getConnection();
+//     try {
+//         const placeholders = customerIds.map(() => '?').join(', ');
+//         const [rows] = await conn.query(
+//             `SELECT id, name, phone, email FROM customer WHERE id IN (${placeholders}) AND is_active = TRUE`,
+//             customerIds
+//         );
+//         return rows; // rows will already be an array of objects
+//     } finally {
+//         conn.release();
+//     }
+// };
 
 const getCustomersByCompanyId = async ({ companyId, limit = 1000, offset = 0 }) => {
     const conn = await pool.getConnection();
@@ -209,7 +210,7 @@ module.exports = {
     insertCustomer,
     updateCustomer,
     deleteCustomer,
-    getCustomerById,
-    getCustomersByIds,
+    // getCustomerById,
+    // getCustomersByIds,
     getCustomersByCompanyId
 };

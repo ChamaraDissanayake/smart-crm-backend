@@ -7,7 +7,7 @@ const MODEL_NAME = 'deepseek-chat';
 
 const generateBotResponse = async ({ threadId, companyId }) => {
     // 1. Get chat history (reversed to have latest first)
-    const pastMessages = await getChatHistory(threadId, 1000, 0);
+    const pastMessages = await getChatHistory(threadId, 10, 0);
     const chatHistory = pastMessages.reverse().map(msg => ({
         role: msg.role,
         content: msg.content
@@ -27,7 +27,7 @@ const generateBotResponse = async ({ threadId, companyId }) => {
     const response = await openai.chat.completions.create({
         model: MODEL_NAME,
         messages,
-        temperature: 0.4,
+        temperature: 0.7,
         max_tokens: 300,
     });
 
