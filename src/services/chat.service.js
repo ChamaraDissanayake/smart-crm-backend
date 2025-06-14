@@ -101,9 +101,10 @@ const findOrCreateThread = async ({ customerId, companyId, channel = 'web' }) =>
 
         if (isNewThread) {
             // Emit to CRM frontend chats that a new thread was created
+            const data = await chatModel.getChatThreadWithCustomerInfoByThreadId(thread.id);
             emitToCompany(thread.company_id, {
-                id: thread.id,
-                companyId: thread.company_id
+                ...data,
+                companyId: thread.company_id,
             });
         }
         return thread;

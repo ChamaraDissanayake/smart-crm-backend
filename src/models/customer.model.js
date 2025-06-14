@@ -177,20 +177,33 @@ const getCustomersByCompanyId = async ({ companyId, limit = 1000, offset = 0 }) 
     const conn = await pool.getConnection();
     try {
         const [rows] = await conn.query(
-            `SELECT id, name, code, phone, email, location, is_company, updated_at 
-             FROM customers 
-             WHERE company_id = ? AND is_active = TRUE
-             ORDER BY created_at DESC
+            `SELECT 
+                c.id, 
+                c.name, 
+                c.code, 
+                c.phone, 
+                c.email, 
+                c.location, 
+                c.is_company, 
+                c.updated_at,
+                GROUP_CONCAT(DISTINCT t.channel) AS channels
+             FROM customers c
+             LEFT JOIN chat_threads t 
+                ON t.customer_id = c.id AND t.is_active = TRUE
+             WHERE c.company_id = ? AND c.is_active = TRUE
+             GROUP BY c.id
+             ORDER BY c.created_at DESC
              LIMIT ? OFFSET ?`,
             [companyId, limit, offset]
         );
 
         const transformedRows = rows.map(row => {
-            const { is_company, updated_at, ...rest } = row;
+            const { is_company, updated_at, channels, ...rest } = row;
             return {
                 ...rest,
                 isCompany: is_company,
                 updatedAt: updated_at,
+                channels: channels ? channels.split(',') : [],
             };
         });
         return transformedRows;

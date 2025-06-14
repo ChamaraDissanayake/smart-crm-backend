@@ -239,6 +239,68 @@ const getChatThreadsWithCustomerInfo = async ({ companyId, channel }) => {
     }
 };
 
+const getChatThreadWithCustomerInfoByThreadId = async (threadId) => {
+    const conn = await pool.getConnection();
+    try {
+        const [rows] = await conn.query(
+            `SELECT 
+                t.id AS thread_id,
+                t.customer_id,
+                t.channel,
+                t.assigned_agent_id,
+                t.current_handler,
+                c.name AS customer_name,
+                c.phone AS customer_phone,
+                c.email AS customer_email,
+                m.content AS last_message,
+                m.role AS last_message_role,
+                m.created_at AS last_message_at
+            FROM chat_threads t
+            INNER JOIN customers c ON t.customer_id = c.id
+            LEFT JOIN (
+                SELECT cm1.thread_id, cm1.content, cm1.role, cm1.created_at
+                FROM chat_messages cm1
+                INNER JOIN (
+                    SELECT thread_id, MAX(created_at) AS max_created_at
+                    FROM chat_messages
+                    GROUP BY thread_id
+                ) cm2 ON cm1.thread_id = cm2.thread_id AND cm1.created_at = cm2.max_created_at
+            ) m ON t.id = m.thread_id
+            WHERE t.id = ?
+            LIMIT 1`,
+            [threadId]
+        );
+
+        if (rows.length === 0) return null;
+
+        const row = rows[0];
+        return {
+            id: row.thread_id,
+            channel: row.channel,
+            assignee: row.assigned_agent_id,
+            currentHandler: row.current_handler,
+            customer: {
+                id: row.customer_id,
+                name: row.customer_name,
+                phone: row.customer_phone,
+                email: row.customer_email
+            },
+            lastMessage: row.last_message
+                ? {
+                    content: row.last_message,
+                    role: row.last_message_role,
+                    createdAt: row.last_message_at
+                }
+                : null
+        };
+    } catch (err) {
+        console.error('Database error in getChatThreadWithCustomerInfoById:', err.message);
+        throw new Error('Failed to fetch chat thread');
+    } finally {
+        conn.release();
+    }
+};
+
 const markAsDone = async ({ threadId }) => {
     const [result] = await pool.query(
         'UPDATE chat_threads SET is_active = FALSE, closed_at = CURRENT_TIMESTAMP WHERE id = ?',
@@ -272,6 +334,7 @@ module.exports = {
     deleteOldMessages,
     getThreadsByCompanyId,
     getChatThreadsWithCustomerInfo,
+    getChatThreadWithCustomerInfoByThreadId,
     checkThreadExists,
     markAsDone,
     assignChat,
