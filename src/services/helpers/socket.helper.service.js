@@ -6,7 +6,9 @@ const setupSocket = (server, socketConfig = {}) => {
     const { Server } = require('socket.io');
     io = new Server(server, {
         ...socketConfig,
-        path: '/socket.io', // Explicitly set the path
+        path: '/socket.io',
+        pingInterval: 25000, // Every 25 seconds, send ping to client
+        pingTimeout: 60000,  // Wait 60 seconds for pong response
         connectionStateRecovery: {
             maxDisconnectionDuration: 2 * 60 * 1000,
         }
