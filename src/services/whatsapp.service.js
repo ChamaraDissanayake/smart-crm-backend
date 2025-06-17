@@ -8,7 +8,7 @@ const { generateBotResponse, saveAndEmitMessage, findOrCreateThread } = require(
 
 const BASE_GRAPH_URI = process.env.BASE_GRAPH_URI || 'https://graph.facebook.com/v22.0';
 
-const saveAndEmitWhatsAppMessage = async ({ phone, content, role, companyId, phoneNumberId }) => {
+const saveAndEmitWhatsAppMessage = async ({ phone, name, content, role, companyId, phoneNumberId }) => {
     // Inline logic to resolve companyId, customerId, threadId
     if (!companyId && phoneNumberId) {
         const integration = await getWhatsAppIntegration({ phoneNumberId });
@@ -18,7 +18,7 @@ const saveAndEmitWhatsAppMessage = async ({ phone, content, role, companyId, pho
 
     if (!companyId) throw new Error('Missing companyId and phoneNumberId — can’t resolve company context');
 
-    const customerId = await getOrCreateCustomerByPhone({ phone, companyId });
+    const customerId = await getOrCreateCustomerByPhone({ phone, name, companyId });
 
     const thread = await findOrCreateThread({
         customerId,
@@ -75,30 +75,66 @@ const sendMessage = async ({ to, message, companyId }) => {
 };
 
 const handleIncomingMessage = async (data) => {
-    const messageObj = data?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-    const phoneNumberId = data?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
-    const receiverPhone = data?.entry?.[0]?.changes?.[0]?.value?.metadata?.display_phone_number;
+    const value = data?.entry?.[0]?.changes?.[0]?.value;
+    const messageObj = value?.messages?.[0];
+    const phoneNumberId = value?.metadata?.phone_number_id;
+    const customerPhone = value?.metadata?.display_phone_number;
+    const customerName = value?.contacts?.[0]?.profile?.name;
 
-    if (!messageObj || messageObj.type !== 'text') {
-        console.warn('⚠️ Ignored non-text or missing message.');
+    // Handle status updates like 'sent', 'delivered', etc.
+    const statusUpdate = value?.statuses?.[0]?.status;
+    if (statusUpdate) {
+        console.log('📦 Message status update:', statusUpdate);
+        return;
+    }
+
+    // Ensure a message is present
+    if (!messageObj) {
+        console.warn('⚠️ No message object found. Skipping.');
         return;
     }
 
     const senderWaId = messageObj.from;
-    const text = messageObj.text?.body;
+    const messageType = messageObj.type;
+    let content = '';
 
-    if (!senderWaId || !text || !receiverPhone || !phoneNumberId) {
-        console.warn('⚠️ Missing key data (sender, receiver, text, phoneNumberId). Skipping.');
+    switch (messageType) {
+        case 'text':
+            content = messageObj.text?.body;
+            break;
+        case 'image':
+            content = `[Image] Media ID: ${messageObj.image?.id}`;
+            break;
+        case 'document':
+            content = `[Document] Filename: ${messageObj.document?.filename}, Media ID: ${messageObj.document?.id}`;
+            break;
+        case 'audio':
+            content = `[Audio] Media ID: ${messageObj.audio?.id}`;
+            break;
+        case 'video':
+            content = `[Video] Media ID: ${messageObj.video?.id}`;
+            break;
+        default:
+            console.warn(`⚠️ Unsupported message type received: ${messageType}`);
+            return;
+    }
+
+    if (!senderWaId || !content || !customerPhone || !phoneNumberId) {
+        console.warn('⚠️ Missing key data (sender, receiver, content, phoneNumberId). Skipping.');
         return;
     }
 
-    console.log(`💬 Message: ${text}`);
+    console.log(`💬 Message received from ${senderWaId} [${messageType}]: ${content}`);
 
     const { thread } = await saveAndEmitWhatsAppMessage({
         phone: senderWaId,
-        content: text,
+        name: customerName,
+        content,
         role: 'user',
-        phoneNumberId
+        phoneNumberId,
+        messageType,
+        mediaId: messageObj[messageType]?.id || null,
+        fileName: messageObj.document?.filename || null // optional
     });
 
     if (thread.current_handler === 'bot') {
@@ -107,7 +143,6 @@ const handleIncomingMessage = async (data) => {
             companyId: thread.company_id
         });
 
-        // Send only the clean message to customer
         await sendMessage({ to: senderWaId, message: botResponse, companyId: thread.company_id });
     }
 };

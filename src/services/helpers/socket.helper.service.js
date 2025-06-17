@@ -21,13 +21,13 @@ const setupSocket = (server, socketConfig = {}) => {
         socket.on('join-thread', (threadId) => {
             const room = `thread:${threadId}`;
             socket.join(room);
-            console.log(`📥 Socket ${socket.id} joined ${room}`);
+            // console.log(`📥 Socket ${socket.id} joined ${room}`);
         });
 
         socket.on('join-company', (companyId) => {
             const room = `company:${companyId}`;
             socket.join(room);
-            console.log(`📥 Socket ${socket.id} joined ${room}`);
+            // console.log(`📥 Socket ${socket.id} joined ${room}`);
         });
 
 
