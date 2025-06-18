@@ -1,6 +1,7 @@
 // src/controllers/chat.controller.js
 
 const chatService = require('../services/chat.service');
+const whatsappService = require('../services/whatsapp.service');
 
 const getChatHeadsByCompanyId = async (req, res) => {
     try {
@@ -112,7 +113,7 @@ const markAsDone = async (req, res) => {
 
 const assignChat = async (req, res) => {
     try {
-        const { threadId, chatHandler, assignedAgentId } = req.body;
+        const { threadId, chatHandler, assignedAgentId, channel, phone, companyId } = req.body;
 
         const result = await chatService.assignChat({
             threadId, chatHandler, assignedAgentId
@@ -120,11 +121,17 @@ const assignChat = async (req, res) => {
 
         if (chatHandler !== 'bot') {
             // Notify the agent about the new assignment
+            const ourMessage = 'One of our agents will contact you soon!';
+
             await chatService.saveAndEmitMessage({
                 threadId,
                 role: 'assistant',
-                content: `One of our agents will contact you soon!`
+                content: ourMessage
             });
+
+            if (channel === 'whatsapp') {
+                await whatsappService.sendMessage({ to: phone, message: ourMessage, companyId })
+            }
         }
 
         res.json({
