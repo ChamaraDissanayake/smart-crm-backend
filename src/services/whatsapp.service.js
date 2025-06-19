@@ -12,7 +12,6 @@ const { getExtensionFromMime } = require('../services/helpers/mime.helper.servic
 
 const BASE_GRAPH_URI = process.env.BASE_GRAPH_URI || 'https://graph.facebook.com/v22.0';
 const fileServiceUrl = `${process.env.BASE_URL}/api/files/upload`;
-const downloadsDir = path.resolve(__dirname, '../../shared-files');
 
 const saveAndEmitWhatsAppMessage = async ({
     phone,
@@ -98,6 +97,7 @@ const handleIncomingMessage = async (data) => {
     const customerPhone = value?.metadata?.display_phone_number;
     const customerName = value?.contacts?.[0]?.profile?.name;
 
+    // Handle status updates (delivery receipts)
     const statusUpdate = value?.statuses?.[0]?.status;
     if (statusUpdate) {
         console.log('📦 Message status update:', statusUpdate);
@@ -114,59 +114,85 @@ const handleIncomingMessage = async (data) => {
     let content = '';
     let fileUrl = null;
     let filename = null;
+    let mimeType = null;
 
     try {
+        // Handle media messages (image, document, audio, video)
         if (['image', 'document', 'audio', 'video'].includes(messageType)) {
             const mediaId = messageObj[messageType]?.id;
-            if (!mediaId) return;
+            if (!mediaId) {
+                console.warn('⚠️ Media message received but no media ID found');
+                return;
+            }
+
             const integration = await getWhatsAppIntegration({ phoneNumberId });
-            const accessToken = integration?.access_token;
-            if (!accessToken) return;
-            // Download media locally
-            const { filename: downloadedFilename, mimeType, outputPath } = await downloadWhatsAppMedia({
-                mediaId,
-                accessToken,
-                outputFolder: downloadsDir
+            if (!integration?.access_token) {
+                console.warn('⚠️ No integration found for phoneNumberId:', phoneNumberId);
+                return;
+            }
+
+            // 1. Get media metadata from WhatsApp
+            const metaRes = await axios.get(`${BASE_GRAPH_URI}/${mediaId}`, {
+                headers: { Authorization: `Bearer ${integration.access_token}` },
+                timeout: 10000
             });
 
-            filename =
-                messageObj?.document?.filename ||
-                downloadedFilename ||
-                null;
+            mimeType = metaRes.data.mime_type;
+            const originalFilename = messageObj?.document?.filename;
 
-            // Get caption text if exists (image or document)
-            const captionText =
-                messageType === 'image' ? (messageObj.image.caption || '') :
-                    messageType === 'document' ? (messageObj.document.caption || '') :
-                        '';
+            // 2. Stream directly to our file service
+            const mediaRes = await axios.get(metaRes.data.url, {
+                headers: { Authorization: `Bearer ${integration.access_token}` },
+                responseType: 'stream',
+                timeout: 60000
+            });
 
-            // Upload media file to your backend
             const form = new FormData();
-            form.append('file', fs.createReadStream(outputPath));
+            form.append('file', mediaRes.data, {
+                filename: originalFilename || `${mediaId}.${getExtensionFromMime(mimeType)}`,
+                contentType: mimeType,
+                knownLength: metaRes.data.file_size // Helps with progress
+            });
+
+            // 3. Upload to our file service
             const uploadRes = await axios.post(fileServiceUrl, form, {
                 headers: {
                     ...form.getHeaders(),
-                    Authorization: `Bearer ${process.env.INTERNAL_UPLOAD_TOKEN}`
+                    Authorization: `Bearer ${process.env.INTERNAL_UPLOAD_TOKEN}`,
+                    'Content-Length': form.getLengthSync()
                 },
-                timeout: 300000,
+                maxBodyLength: Infinity,
+                timeout: 60000
             });
-            fileUrl = `${process.env.FILE_SERVER_BASE_URL || 'http://localhost:3000'}/${uploadRes.data.path}`;
 
-            // Combine file URL and caption for content
-            content = `${fileUrl}` + (captionText ? ` ${captionText}` : '');
-        } else if (messageType === 'text') {
+            fileUrl = `${process.env.BASE_URL}/${uploadRes.data.path}`;
+            filename = originalFilename || uploadRes.data.fileId;
+
+            // Get caption if available (for images/documents)
+            const captionText = messageObj[messageType]?.caption || '';
+            content = captionText ? `${fileUrl} ${captionText}` : fileUrl;
+        }
+        // Handle text messages
+        else if (messageType === 'text') {
             content = messageObj.text?.body;
-        } else {
+        }
+        else {
             console.warn(`⚠️ Unsupported message type received: ${messageType}`);
             return;
         }
-        if (!senderWaId || !content || !customerPhone || !phoneNumberId) {
-            console.warn('⚠️ Missing key data (sender, receiver, content, phoneNumberId). Skipping.');
+
+        // Validate we have required data
+        if (!senderWaId || !content || !phoneNumberId) {
+            console.warn('⚠️ Missing required message data:', {
+                senderWaId, content, phoneNumberId
+            });
             return;
         }
 
-        console.log(`💬 Message received from ${senderWaId} [${messageType}]: ${content}`);
+        console.log(`💬 Message received from ${senderWaId} [${messageType}]:`,
+            messageType === 'text' ? content : `${filename} (${mimeType})`);
 
+        // Save message to our system
         const { thread } = await saveAndEmitWhatsAppMessage({
             phone: senderWaId,
             name: customerName,
@@ -175,14 +201,16 @@ const handleIncomingMessage = async (data) => {
             phoneNumberId,
             messageType,
             fileUrl,
-            filename
+            filename,
+            mimeType
         });
 
+        // Handle bot responses
         if (thread.current_handler === 'bot') {
             let ourResponse = '';
-            if (content.startsWith('http')) {
-                ourResponse = 'One of our agents will check this carefully and contact you soon!';
-                console.log('Chamara extracted BOT_NOTEs:', `BOT_NOTE:${ourResponse}`);
+
+            if (messageType !== 'text') {
+                ourResponse = 'Thank you for sharing this. One of our agents will review it shortly!';
             } else {
                 const { botResponse } = await generateBotResponse({
                     threadId: thread.id,
@@ -191,10 +219,32 @@ const handleIncomingMessage = async (data) => {
                 ourResponse = botResponse;
             }
 
-            await sendMessage({ to: senderWaId, message: ourResponse, companyId: thread.company_id });
+            await sendMessage({
+                to: senderWaId,
+                message: ourResponse,
+                companyId: thread.company_id
+            });
         }
     } catch (err) {
-        console.error('❌ Error processing incoming media message:', err);
+        console.error('❌ Error processing incoming message:', {
+            error: err.message,
+            stack: err.stack,
+            messageType,
+            senderWaId
+        });
+
+        // Attempt to send error notification to user
+        try {
+            if (senderWaId && phoneNumberId) {
+                await sendMessage({
+                    to: senderWaId,
+                    message: 'We encountered an issue processing your message. Please try again.',
+                    companyId: (await getWhatsAppIntegration({ phoneNumberId }))?.company_id
+                });
+            }
+        } catch (sendError) {
+            console.error('❌ Failed to send error notification:', sendError.message);
+        }
     }
 };
 

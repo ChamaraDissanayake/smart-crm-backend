@@ -122,14 +122,13 @@ const assignChat = async (req, res) => {
         if (chatHandler !== 'bot') {
             // Notify the agent about the new assignment
             const ourMessage = 'One of our agents will contact you soon!';
-
-            await chatService.saveAndEmitMessage({
-                threadId,
-                role: 'assistant',
-                content: ourMessage
-            });
-
-            if (channel === 'whatsapp') {
+            if (channel === 'web') {
+                await chatService.saveAndEmitMessage({
+                    threadId,
+                    role: 'assistant',
+                    content: ourMessage
+                });
+            } else {
                 await whatsappService.sendMessage({ to: phone, message: ourMessage, companyId })
             }
         }
