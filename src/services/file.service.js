@@ -29,7 +29,9 @@ const uploadFile = async (file) => {
         if (existingFile) {
             await fs.unlink(file.path);
             return {
-                ...existingFile,
+                fileId: existingFile.id,
+                path: existingFile.path,
+                size: existingFile.size,
                 isDuplicate: true,
                 message: 'File already exists'
             };
@@ -40,8 +42,7 @@ const uploadFile = async (file) => {
         const stats = await fs.stat(newPath);
 
         const fileId = uuidv4();
-        await fileModel.create(fileId, file.originalname, newPath, fileHash, stats.size);
-
+        await fileModel.create(fileId, file.originalname, newPath, fileHash, stats.size, mimeType = file.mimetype);
 
         return {
             fileId,
@@ -52,6 +53,8 @@ const uploadFile = async (file) => {
         };
     } catch (error) {
         // Cleanup if error occurs
+        console.error(error);
+
         if (file?.path) {
             await fs.unlink(file.path).catch(() => { });
         }

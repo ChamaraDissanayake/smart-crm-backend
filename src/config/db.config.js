@@ -68,6 +68,7 @@ const initDB = async () => {
         path VARCHAR(512) NOT NULL,
         content_hash VARCHAR(64) UNIQUE,
         size BIGINT,
+        mime_type VARCHAR(36) DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);

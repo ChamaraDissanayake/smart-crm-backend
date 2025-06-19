@@ -44,8 +44,34 @@ const receiveWhatsAppMessage = async (req, res) => {
     }
 };
 
+const sendMediaMessage = async (req, res) => {
+    try {
+        const { to, fileId, path, caption, companyId } = req.body;
+
+        if (!to || !fileId || !companyId) {
+            return res.status(400).json({ error: 'Missing required parameters' });
+        }
+
+        const result = await whatsappService.sendMediaMessage({
+            to,
+            fileId,
+            path,
+            caption,
+            companyId
+        });
+
+        res.json(result);
+    } catch (error) {
+        console.error('❌ Send Media Error:', error);
+        res.status(500).json({
+            error: error.message || 'Failed to send media message'
+        });
+    }
+};
+
 module.exports = {
     sendWhatsAppMessage,
     receiveWhatsAppMessage,
-    verifyWebhook
+    verifyWebhook,
+    sendMediaMessage
 }

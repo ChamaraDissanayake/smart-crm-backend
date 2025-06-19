@@ -1,11 +1,11 @@
 const { pool } = require('../config/db.config');
 const fs = require('fs/promises');  // Added filesystem module
 
-const create = async (id, filename, path, content_hash, size) => {
+const create = async (id, filename, path, content_hash, size, mimeType) => {
     try {
         const [result] = await pool.query(
-            'INSERT INTO files (id, filename, path, content_hash, size) VALUES (?, ?, ?, ?, ?)',
-            [id, filename, path, content_hash, size]
+            'INSERT INTO files (id, filename, path, content_hash, size, mime_type) VALUES (?, ?, ?, ?, ?, ?)',
+            [id, filename, path, content_hash, size, mimeType]
         );
         return result.insertId;
     } catch (error) {
@@ -16,7 +16,7 @@ const create = async (id, filename, path, content_hash, size) => {
 
 const findByHash = async (content_hash) => {
     const [rows] = await pool.query(
-        'SELECT id, path FROM files WHERE content_hash = ?',
+        'SELECT id, path, size FROM files WHERE content_hash = ?',
         [content_hash]
     );
     return rows[0];
@@ -25,6 +25,11 @@ const findByHash = async (content_hash) => {
 const getAll = async () => {
     const [rows] = await pool.query('SELECT * FROM files');
     return rows;
+};
+
+const getFileById = async (id) => {
+    const [rows] = await pool.query('SELECT * FROM files WHERE id = ?', [id]);
+    return rows[0];
 };
 
 const deleteFile = async (id) => {
@@ -51,6 +56,7 @@ module.exports = {
     create,
     findByHash,
     getAll,
+    getFileById,
     deleteFile,
     getPath,
     getAllPaths

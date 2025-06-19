@@ -114,15 +114,16 @@ const findOrCreateThread = async ({ customerId, companyId, channel = 'web' }) =>
     }
 };
 
-const saveAndEmitMessage = async ({ threadId, role, content }) => {
+const saveAndEmitMessage = async ({ threadId, role, content, type, fileUrl, fileName, mimeType }) => {
     try {
-        const msgId = await chatModel.saveMessage({ thread_id: threadId, role, content });
+        const formattedContent = type === 'text' ? content : `${fileUrl}\n${content}`;
+        const msgId = await chatModel.saveMessage({ thread_id: threadId, role, content: formattedContent });
 
         // Emit over socket to frontend
         emitToThread(threadId, {
             id: msgId,
             threadId,
-            content,
+            content: formattedContent,
             role,
             createdAt: new Date().toISOString(),
         });

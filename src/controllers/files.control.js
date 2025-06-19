@@ -37,6 +37,24 @@ const getFiles = async (req, res) => {
     }
 };
 
+const getFileById = async (req, res) => {
+    try {
+        const fileId = req.params.id;
+        const file = await fileModel.getFileById(fileId);
+
+        if (!file) return res.status(404).json({ error: 'File not found' });
+        res.json({
+            fileId: file.id,
+            filename: file.filename,
+            path: file.path,
+            mimeType: file.mime_type,
+            size: file.size
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 const deleteFile = async (req, res) => {
     try {
         const fileId = req.params.id;
@@ -68,5 +86,6 @@ const deleteFile = async (req, res) => {
 module.exports = {
     uploadFile,
     getFiles,
+    getFileById,
     deleteFile
 };

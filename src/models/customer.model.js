@@ -66,8 +66,6 @@ const insertCustomer = async (customer) => {
 const updateCustomer = async (customer) => {
     const conn = await pool.getConnection();
     try {
-        console.log('Chamara update customer', customer);
-
         const query = `
             UPDATE customers
             SET name = ?, email = ?, location = ?, is_company = ?, code = ?, phone = ?

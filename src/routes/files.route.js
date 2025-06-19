@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { uploadFile, getFiles, deleteFile } = require('../controllers/files.control');
+const { uploadFile, getFiles, getFileById, deleteFile } = require('../controllers/files.control');
 const fileService = require('../services/file.service');
 const authenticate = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
@@ -15,6 +15,7 @@ const uploadLimiter = rateLimit({
 
 router.post('/upload', authenticate, uploadLimiter, uploadFile);
 router.get('/', authenticate, getFiles);
+router.get('/:id', authenticate, getFileById);
 router.delete('/:id', authenticate, deleteFile);
 
 // Run cleanup on startup with delay
