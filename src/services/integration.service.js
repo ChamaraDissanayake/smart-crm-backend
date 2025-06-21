@@ -5,7 +5,6 @@ const FACEBOOK_APP_ID = process.env.FB_APP_ID;
 const FACEBOOK_APP_SECRET = process.env.FB_APP_SECRET;
 const REDIRECT_URI = `${process.env.BASE_URL}/${process.env.FB_REDIRECT_URI}` || 'http://localhost:3000/api/integration/facebook/callback';
 const BASE_GRAPH_URI = process.env.BASE_GRAPH_URI || 'https://graph.facebook.com/v22.0';
-console.log('Chamara redirect url', REDIRECT_URI);
 
 const getFacebookLoginURL = (userId) => {
     const scope = [
