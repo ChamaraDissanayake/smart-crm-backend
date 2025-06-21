@@ -13,6 +13,7 @@ const { get, post } = require('./helpers/axios.helper.service');
 const BASE_GRAPH_URI = process.env.BASE_GRAPH_URI || 'https://graph.facebook.com/v22.0';
 const FILE_SERVICE_URL = `${process.env.BASE_URL}/api/files/upload`;
 const WHATSAPP_MEDIA_UPLOAD_TIMEOUT = 60000;
+const recentlyRepliedThreads = new Set();
 
 const saveAndEmitWhatsAppMessage = async ({
     phone,
@@ -190,22 +191,32 @@ const handleIncomingMessage = async (data) => {
             mimeType
         });
 
-        if (thread.current_handler === 'bot') {
-            let ourResponse = '';
+        const threadKey = thread.id;
+        if (thread.current_handler === 'bot' && messageType !== 'text') {
+            if (!recentlyRepliedThreads.has(threadKey)) {
+                recentlyRepliedThreads.add(threadKey);
 
-            if (messageType !== 'text') {
-                ourResponse = 'Thank you for sharing this. One of our agents will review it shortly!';
-            } else {
-                const { botResponse } = await generateBotResponse({
-                    threadId: thread.id,
+                setTimeout(() => {
+                    recentlyRepliedThreads.delete(threadKey);
+                }, 3000); // Clear after 3 seconds
+
+                await sendMessage({
+                    to: senderWaId,
+                    message: 'Thank you for sharing this. One of our agents will review it shortly!',
                     companyId: thread.company_id
                 });
-                ourResponse = botResponse;
             }
+        }
+
+        if (thread.current_handler === 'bot' && messageType === 'text') {
+            const { botResponse } = await generateBotResponse({
+                threadId: thread.id,
+                companyId: thread.company_id
+            });
 
             await sendMessage({
                 to: senderWaId,
-                message: ourResponse,
+                message: botResponse,
                 companyId: thread.company_id
             });
         }
