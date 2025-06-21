@@ -379,13 +379,16 @@ const sendMediaMessage = async ({ to, fileId, caption = '', companyId }) => {
         }
     });
 
+    const fileUrl = `${process.env.BASE_URL}/${filePath}`;
+    const formattedContent = caption ? `${fileUrl}\n${caption}` : fileUrl;
+
     await saveAndEmitWhatsAppMessage({
         phone: to,
-        content: caption || '',
+        content: formattedContent,
         role: 'assistant',
         companyId,
         messageType: 'media',
-        fileUrl: `${process.env.BASE_URL}/${filePath}`,
+        fileUrl,
         filename,
         mimeType
     });
