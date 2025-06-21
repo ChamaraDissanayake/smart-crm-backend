@@ -1,5 +1,4 @@
 // src/services/whatsapp.service.js
-const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
@@ -9,6 +8,7 @@ const {
 const { getOrCreateCustomerByPhone } = require('./customer.service');
 const { generateBotResponse, saveAndEmitMessage, findOrCreateThread } = require('./chat.service');
 const { getExtensionFromMime } = require('../services/helpers/mime.helper.service');
+const { get, post } = require('./helpers/axios.helper.service');
 
 const BASE_GRAPH_URI = process.env.BASE_GRAPH_URI || 'https://graph.facebook.com/v22.0';
 const FILE_SERVICE_URL = `${process.env.BASE_URL}/api/files/upload`;
@@ -58,10 +58,10 @@ const saveAndEmitWhatsAppMessage = async ({
 };
 
 const sendMessage = async ({ to, message, fileId, path, caption, companyId }) => {
-
     if (fileId) {
         return await sendMediaMessage({ to, fileId, path, caption, companyId });
     }
+
     const integration = await getWhatsAppIntegration({ companyId });
 
     if (!integration) {
@@ -71,7 +71,7 @@ const sendMessage = async ({ to, message, fileId, path, caption, companyId }) =>
     const { access_token, phone_number_id } = integration;
     const url = `${BASE_GRAPH_URI}/${phone_number_id}/messages`;
 
-    const res = await axios.post(
+    const res = await post(
         url,
         {
             messaging_product: 'whatsapp',
@@ -79,12 +79,8 @@ const sendMessage = async ({ to, message, fileId, path, caption, companyId }) =>
             type: 'text',
             text: { body: message },
         },
-        {
-            headers: {
-                Authorization: `Bearer ${access_token}`,
-                'Content-Type': 'application/json',
-            },
-        }
+        access_token,
+        { headers: { 'Content-Type': 'application/json' } }
     );
 
     await saveAndEmitWhatsAppMessage({
@@ -103,7 +99,6 @@ const handleIncomingMessage = async (data) => {
     const phoneNumberId = value?.metadata?.phone_number_id;
     const customerName = value?.contacts?.[0]?.profile?.name;
 
-    // Handle status updates (delivery receipts)
     const statusUpdate = value?.statuses?.[0]?.status;
     if (statusUpdate) {
         console.log('📦 Message status update:', statusUpdate);
@@ -123,7 +118,6 @@ const handleIncomingMessage = async (data) => {
     let mimeType = null;
 
     try {
-        // Handle media messages (image, document, audio, video)
         if (['image', 'document', 'audio', 'video'].includes(messageType)) {
             const mediaId = messageObj[messageType]?.id;
             if (!mediaId) {
@@ -137,18 +131,11 @@ const handleIncomingMessage = async (data) => {
                 return;
             }
 
-            // 1. Get media metadata from WhatsApp
-            const metaRes = await axios.get(`${BASE_GRAPH_URI}/${mediaId}`, {
-                headers: { Authorization: `Bearer ${integration.access_token}` },
-                timeout: 10000
-            });
-
+            const metaRes = await get(`${BASE_GRAPH_URI}/${mediaId}`, integration.access_token, { timeout: 10000 });
             mimeType = metaRes.data.mime_type;
             const originalFilename = messageObj?.document?.filename;
 
-            // 2. Stream directly to our file service
-            const mediaRes = await axios.get(metaRes.data.url, {
-                headers: { Authorization: `Bearer ${integration.access_token}` },
+            const mediaRes = await get(metaRes.data.url, integration.access_token, {
                 responseType: 'stream',
                 timeout: WHATSAPP_MEDIA_UPLOAD_TIMEOUT
             });
@@ -157,28 +144,22 @@ const handleIncomingMessage = async (data) => {
             form.append('file', mediaRes.data, {
                 filename: originalFilename || `${mediaId}.${getExtensionFromMime(mimeType)}`,
                 contentType: mimeType,
-                knownLength: metaRes.data.file_size // Helps with progress
+                knownLength: metaRes.data.file_size
             });
 
-            // 3. Upload to our file service
-            const uploadRes = await axios.post(FILE_SERVICE_URL, form, {
+            const uploadRes = await post(FILE_SERVICE_URL, form, process.env.INTERNAL_UPLOAD_TOKEN, {
                 headers: {
                     ...form.getHeaders(),
-                    Authorization: `Bearer ${process.env.INTERNAL_UPLOAD_TOKEN}`,
                     'Content-Length': form.getLengthSync()
                 },
-                maxBodyLength: Infinity,
                 timeout: WHATSAPP_MEDIA_UPLOAD_TIMEOUT
             });
 
             fileUrl = `${process.env.BASE_URL}/${uploadRes.data.path}`;
             filename = originalFilename || uploadRes.data.fileId;
-
-            // Get caption if available (for images/documents)
             const captionText = messageObj[messageType]?.caption || '';
             content = captionText ? `${fileUrl} ${captionText}` : fileUrl;
         }
-        // Handle text messages
         else if (messageType === 'text') {
             content = messageObj.text?.body;
         }
@@ -187,7 +168,6 @@ const handleIncomingMessage = async (data) => {
             return;
         }
 
-        // Validate we have required data
         if (!senderWaId || !content || !phoneNumberId) {
             console.warn('⚠️ Missing required message data:', {
                 senderWaId, content, phoneNumberId
@@ -198,7 +178,6 @@ const handleIncomingMessage = async (data) => {
         console.log(`💬 Message received from ${senderWaId} [${messageType}]:`,
             messageType === 'text' ? content : `${filename} (${mimeType})`);
 
-        // Save message to our system
         const { thread } = await saveAndEmitWhatsAppMessage({
             phone: senderWaId,
             name: customerName,
@@ -211,7 +190,6 @@ const handleIncomingMessage = async (data) => {
             mimeType
         });
 
-        // Handle bot responses
         if (thread.current_handler === 'bot') {
             let ourResponse = '';
 
@@ -239,7 +217,6 @@ const handleIncomingMessage = async (data) => {
             senderWaId
         });
 
-        // Attempt to send error notification to user
         try {
             if (senderWaId && phoneNumberId) {
                 await sendMessage({
@@ -255,10 +232,7 @@ const handleIncomingMessage = async (data) => {
 };
 
 const downloadWhatsAppMedia = async ({ mediaId, accessToken, outputFolder = './downloads' }) => {
-    const metaRes = await axios.get(`${BASE_GRAPH_URI}/${mediaId}`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-    });
-
+    const metaRes = await get(`${BASE_GRAPH_URI}/${mediaId}`, accessToken);
     const url = metaRes.data.url;
     const mimeType = metaRes.data.mime_type;
     const extension = getExtensionFromMime(mimeType);
@@ -267,11 +241,7 @@ const downloadWhatsAppMedia = async ({ mediaId, accessToken, outputFolder = './d
 
     fs.mkdirSync(outputFolder, { recursive: true });
 
-    const mediaRes = await axios.get(url, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        responseType: 'stream'
-    });
-
+    const mediaRes = await get(url, accessToken, { responseType: 'stream' });
     const writer = fs.createWriteStream(outputPath);
     mediaRes.data.pipe(writer);
 
@@ -283,30 +253,20 @@ const downloadWhatsAppMedia = async ({ mediaId, accessToken, outputFolder = './d
 
 const sendMediaMessage = async ({ to, fileId, caption = '', companyId }) => {
     const integration = await getWhatsAppIntegration({ companyId });
-
-    if (!integration) {
-        throw new Error('No active WhatsApp integration found');
-    }
-
+    if (!integration) throw new Error('No active WhatsApp integration found');
     const { access_token, phone_number_id } = integration;
 
-    // 1. Get file metadata
-    const fileMeta = await axios.get(`${process.env.BASE_URL}/api/files/${fileId}`, {
-        headers: {
-            Authorization: `Bearer ${process.env.INTERNAL_UPLOAD_TOKEN}`
-        }
-    }).catch(err => {
-        console.error('File fetch failed:', {
-            url: `${process.env.BASE_URL}/api/files/${fileId}`,
-            status: err.response?.status,
-            data: err.response?.data
+    const fileMeta = await get(`${process.env.BASE_URL}/api/files/${fileId}`, process.env.INTERNAL_UPLOAD_TOKEN)
+        .catch(err => {
+            console.error('File fetch failed:', {
+                url: `${process.env.BASE_URL}/api/files/${fileId}`,
+                status: err.response?.status,
+                data: err.response?.data
+            });
+            throw new Error(`Failed to fetch file: ${err.message}`);
         });
-        throw new Error(`Failed to fetch file: ${err.message}`);
-    });
 
     const { filename, path: filePath, mimeType, size } = fileMeta.data;
-
-    // 2. Upload to WhatsApp
     const absolutePath = path.join(process.cwd(), filePath);
     const fileStream = fs.createReadStream(absolutePath);
 
@@ -319,27 +279,21 @@ const sendMediaMessage = async ({ to, fileId, caption = '', companyId }) => {
     form.append('type', mimeType);
     form.append('messaging_product', 'whatsapp');
 
-    const uploadUrl = `${BASE_GRAPH_URI}/${phone_number_id}/media`;
-    const uploadRes = await axios.post(uploadUrl, form, {
-        headers: {
-            ...form.getHeaders(),
-            Authorization: `Bearer ${access_token}`
-        },
-        maxBodyLength: Infinity,
+    const uploadRes = await post(`${BASE_GRAPH_URI}/${phone_number_id}/media`, form, access_token, {
+        headers: form.getHeaders(),
         timeout: WHATSAPP_MEDIA_UPLOAD_TIMEOUT
     });
 
     const mediaId = uploadRes.data.id;
 
-    // 3. Infer mediaCategory from WhatsApp error-free upload or fallback guess
     const categoryMap = {
         image: ['image'],
         video: ['video'],
         audio: ['audio'],
-        document: ['application', 'text'] // Fallback category
+        document: ['application', 'text']
     };
 
-    let mediaCategory = 'document'; // Default to document
+    let mediaCategory = 'document';
     for (const [cat, prefixes] of Object.entries(categoryMap)) {
         if (prefixes.some(prefix => mimeType.startsWith(prefix))) {
             mediaCategory = cat;
@@ -347,19 +301,8 @@ const sendMediaMessage = async ({ to, fileId, caption = '', companyId }) => {
         }
     }
 
-    // 4. Build and send message
-    const messageUrl = `${BASE_GRAPH_URI}/${phone_number_id}/messages`;
-
-    const mediaPayload = {
-        id: mediaId,
-    };
-
-    // Add filename for documents only
-    if (mediaCategory === 'document') {
-        mediaPayload.filename = filename;
-    }
-
-    // Add caption only for image or document
+    const mediaPayload = { id: mediaId };
+    if (mediaCategory === 'document') mediaPayload.filename = filename;
     if (['image', 'document'].includes(mediaCategory) && caption) {
         mediaPayload.caption = caption;
     }
@@ -372,11 +315,8 @@ const sendMediaMessage = async ({ to, fileId, caption = '', companyId }) => {
         [mediaCategory]: mediaPayload
     };
 
-    const res = await axios.post(messageUrl, payload, {
-        headers: {
-            Authorization: `Bearer ${access_token}`,
-            'Content-Type': 'application/json'
-        }
+    const res = await post(`${BASE_GRAPH_URI}/${phone_number_id}/messages`, payload, access_token, {
+        headers: { 'Content-Type': 'application/json' }
     });
 
     const fileUrl = `${process.env.BASE_URL}/${filePath}`;
@@ -400,6 +340,7 @@ const sendMediaMessage = async ({ to, fileId, caption = '', companyId }) => {
         whatsappResponse: res.data
     };
 };
+
 
 module.exports = {
     sendMessage,

@@ -1,11 +1,11 @@
-// src/services/integration.service.js
-const axios = require('axios');
 const integrationModel = require('../models/integration.model');
+const { get, getWithParams } = require('./helpers/axios.helper.service');
 
 const FACEBOOK_APP_ID = process.env.FB_APP_ID;
 const FACEBOOK_APP_SECRET = process.env.FB_APP_SECRET;
 const REDIRECT_URI = `${process.env.BASE_URL}/${process.env.FB_REDIRECT_URI}` || 'http://localhost:3000/api/integration/facebook/callback';
 const BASE_GRAPH_URI = process.env.BASE_GRAPH_URI || 'https://graph.facebook.com/v22.0';
+console.log('Chamara redirect url', REDIRECT_URI);
 
 const getFacebookLoginURL = (userId) => {
     const scope = [
@@ -14,35 +14,30 @@ const getFacebookLoginURL = (userId) => {
         "pages_show_list",
         "pages_messaging",
         "pages_read_engagement",
-        'whatsapp_business_messaging',
-        'whatsapp_business_management',
+        "whatsapp_business_messaging",
+        "whatsapp_business_management",
         "business_management"
     ].join(',');
 
-    return `https://www.facebook.com/v19.0/dialog/oauth?client_id=${FACEBOOK_APP_ID}&redirect_uri=${encodeURIComponent(
+    return `https://www.facebook.com/v22.0/dialog/oauth?client_id=${FACEBOOK_APP_ID}&redirect_uri=${encodeURIComponent(
         REDIRECT_URI
     )}&scope=${encodeURIComponent(scope)}&response_type=code&state=${userId}`;
 };
 
 const exchangeCodeForToken = async (code) => {
-    const response = await axios.get(`${BASE_GRAPH_URI}/oauth/access_token`, {
-        params: {
-            client_id: FACEBOOK_APP_ID,
-            client_secret: FACEBOOK_APP_SECRET,
-            redirect_uri: REDIRECT_URI,
-            code
-        }
+    const response = await getWithParams(`${BASE_GRAPH_URI}/oauth/access_token`, {
+        client_id: FACEBOOK_APP_ID,
+        client_secret: FACEBOOK_APP_SECRET,
+        redirect_uri: REDIRECT_URI,
+        code
     });
     return response.data.access_token;
 };
 
 const getUserProfile = async (accessToken) => {
-    const response = await axios.get(`${BASE_GRAPH_URI}/me`, {
+    const response = await get(`${BASE_GRAPH_URI}/me`, accessToken, {
         params: {
             fields: 'id,name,email'
-        },
-        headers: {
-            Authorization: `Bearer ${accessToken}`
         }
     });
     return response.data;
@@ -50,10 +45,9 @@ const getUserProfile = async (accessToken) => {
 
 const getWhatsAppBusinessAccounts = async (userAccessToken) => {
     try {
-        // Step 1: Get the list of businesses the user manages
-        const businessRes = await axios.get(
-            `${BASE_GRAPH_URI}/me/businesses?access_token=${userAccessToken}`
-        );
+        const businessRes = await get(`${BASE_GRAPH_URI}/me/businesses`, null, {
+            params: { access_token: userAccessToken }
+        });
 
         const businesses = businessRes.data.data;
 
@@ -64,20 +58,21 @@ const getWhatsAppBusinessAccounts = async (userAccessToken) => {
 
         const allWhatsAppAccounts = [];
 
-        // Step 2: For each business, get the owned WhatsApp business accounts
         for (const business of businesses) {
             try {
-                const wabaRes = await axios.get(
-                    `${BASE_GRAPH_URI}/${business.id}/owned_whatsapp_business_accounts?access_token=${userAccessToken}`
+                const wabaRes = await get(
+                    `${BASE_GRAPH_URI}/${business.id}/owned_whatsapp_business_accounts`,
+                    null,
+                    { params: { access_token: userAccessToken } }
                 );
 
                 const whatsappAccounts = wabaRes.data.data;
-
                 allWhatsAppAccounts.push(...whatsappAccounts);
             } catch (err) {
                 console.error(`Error fetching WhatsApp accounts for business ID ${business.id}:`, err.response?.data || err);
             }
         }
+
         return allWhatsAppAccounts;
     } catch (error) {
         console.error("Error fetching businesses:", error.response?.data || error);
@@ -86,9 +81,11 @@ const getWhatsAppBusinessAccounts = async (userAccessToken) => {
 };
 
 const getWhatsAppAccountNumber = async (wabaId, token) => {
-    const response = await axios.get(`${BASE_GRAPH_URI}/${wabaId}/phone_numbers?access_token=${token}`);
-    return response.data.data; // Returns array of phone number objects with all their properties
-}
+    const response = await get(`${BASE_GRAPH_URI}/${wabaId}/phone_numbers`, null, {
+        params: { access_token: token }
+    });
+    return response.data.data;
+};
 
 const storeWhatsAppIntegration = async (userId, companyId, token, waba, phone) => {
     const { id: wabaId, name: businessName } = waba;
